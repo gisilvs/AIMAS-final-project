@@ -9,9 +9,9 @@ class Repeater():
 
     def __init__(self, pos):
         self.position = pos
-        self.velocity = np.array((0, 0))
+        self.velocity = np.array((0, 0),dtype=float)
 
-        self.error_prev = np.array((0, 0))
+        self.error_prev = np.array((0, 0),dtype=float)
 
     def control(self, pos_desired):
         """
@@ -116,10 +116,10 @@ def set_bg(repeaters,not_seen):
     pg.draw.circle(screen, (0, 255, 0), to_pygame(ground_station), desired_range * 5, 1)
     if repeaters:
         for repeater in repeaters:
-            pg.draw.line(screen, (0, 0, 255), to_pygame(repeater + np.array([0.8, 0.8])),
-                     to_pygame(repeater+ np.array([-0.8, -0.8])), 3)
-            pg.draw.line(screen, (0, 0, 255), to_pygame(repeater + np.array([-0.8, 0.8])),
-                     to_pygame(repeater + np.array([0.8, -0.8])), 3)
+            pg.draw.line(screen, (0, 0, 255), to_pygame(repeater.position + np.array([0.8, 0.8])),
+                     to_pygame(repeater.position+ np.array([-0.8, -0.8])), 3)
+            pg.draw.line(screen, (0, 0, 255), to_pygame(repeater.position + np.array([-0.8, 0.8])),
+                     to_pygame(repeater.position + np.array([0.8, -0.8])), 3)
     s=pg.Surface((infoObject.current_w, infoObject.current_h),pg.SRCALPHA)
     if not_seen:
         for square in not_seen:
@@ -182,34 +182,34 @@ while not done:
         start = True
 
     for square in not_seen:
-        if np.linalg.norm(traj_pos[time_step]-square['center'])<10:
+        if norm(traj_pos[time_step]-square['center'])<10:
             seen=True
             for vertex in list(np.array(square['square'].exterior.coords))[:-1]:
-                if np.linalg.norm(traj_pos[time_step]-square['center'])>=10:
+                if norm(traj_pos[time_step]-square['center'])>=10:
                     seen=False
             if seen:
                 not_seen.remove(square)
 
 
     if repeaters:
-        if np.linalg.norm(repeaters[-1]-ground_station)>=desired_range:
-            repeaters.append(ground_station)
-        for r in range(repeaters):
+        if norm(repeaters[-1].position-ground_station)>=desired_range:
+            repeaters.append(Repeater(ground_station))
+        for r in range(len(repeaters)):
             if r==0:
-                a=0#todo: go to the boss
+                repeaters[r].move(np.array((0,0)))#todo: go to the boss
             else:
                 a=0#todo: go to the previous repeater
 
 
     else:
-        if np.linalg.norm(traj_pos[time_step]-ground_station)>=desired_range:
-            repeaters.append(ground_station)
+        if norm(traj_pos[time_step]-ground_station)>=desired_range:
+            repeaters.append(Repeater(ground_station))
 
 
 
 
     time_step += 1
 
-    if time_step%4==0:
+    if time_step%20==0:
         set_bg(repeaters,not_seen)
         pg.display.flip()
