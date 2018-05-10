@@ -111,6 +111,7 @@ def set_bg(repeaters,not_seen):
     pg.draw.line(screen,(255,0,0),to_pygame(traj_pos[time_step]+np.array([1,1])),to_pygame(traj_pos[time_step]+np.array([-1,-1])),4)
     pg.draw.line(screen, (255, 0, 0), to_pygame(traj_pos[time_step] + np.array([-1, 1])),
                  to_pygame(traj_pos[time_step] + np.array([1, -1])),4)
+    pg.draw.circle(screen,(255,0,0),to_pygame(traj_pos[time_step]),scanning_range*5,1)
     pg.draw.circle(screen,(0,153,0),to_pygame(ground_station),5)
     pg.draw.circle(screen,(0,153,0),to_pygame(ground_station),sensor_range*5,1)
     pg.draw.circle(screen, (0, 255, 0), to_pygame(ground_station), desired_range * 5, 1)
@@ -142,6 +143,7 @@ bounding_polygon = data["bounding_polygon"]
 ground_station=np.array(data["ground_station"],dtype=float)
 sensor_range=data["sensor_range"]
 desired_range=data["desired_range"]
+scanning_range=data["scanning_range"]
 
 a_max = data["vehicle_a_max"]
 v_max = data["vehicle_v_max"]
@@ -183,10 +185,10 @@ while not done:
 
     ## check if we see some square
     for square in not_seen:
-        if norm(traj_pos[time_step]-square['center'])<10:
+        if norm(traj_pos[time_step]-square['center'])<scanning_range:
             seen=True
             for vertex in list(np.array(square['square'].exterior.coords))[:-1]:
-                if norm(traj_pos[time_step]-square['center'])>=10:
+                if norm(traj_pos[time_step]-square['center'])>=scanning_range:
                     seen=False
             if seen:
                 not_seen.remove(square)
@@ -217,6 +219,6 @@ while not done:
 
     time_step += 1
 
-    if time_step%20==0:
+    if time_step%2==0:
         set_bg(repeaters,not_seen)
         pg.display.flip()
