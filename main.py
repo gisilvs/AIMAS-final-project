@@ -9,9 +9,9 @@ class Repeater():
 
     def __init__(self, pos):
         self.position = pos
-        self.velocity = np.array((0, 0),dtype=float)
+        self.velocity = np.array((0, 0), dtype=float)
 
-        self.error_prev = np.array((0, 0),dtype=float)
+        self.error_prev = np.array((0, 0))
 
     def control(self, pos_desired):
         """
