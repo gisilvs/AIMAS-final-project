@@ -210,7 +210,7 @@ while not done:
     #if there are no repeaters, we check if the payload is on range.
     # if not, we add a repeater
         if norm(traj_pos[time_step]-ground_station)>=desired_range:
-            pos=ground_station
+            pos=ground_station.copy()
             repeaters.append(Repeater(pos))
 
 
