@@ -139,7 +139,7 @@ screen.fill(background_colour)
 data = json.load(open('P25_X.json'))
 traj=json.load(open('P25_26_traj.json'))
 bounding_polygon = data["bounding_polygon"]
-ground_station=np.array(data["ground_station"])
+ground_station=np.array(data["ground_station"],dtype=float)
 sensor_range=data["sensor_range"]
 desired_range=data["desired_range"]
 
@@ -181,6 +181,7 @@ while not done:
             t1 = time.time()
         start = True
 
+    ## check if we see some square
     for square in not_seen:
         if norm(traj_pos[time_step]-square['center'])<10:
             seen=True
@@ -192,18 +193,25 @@ while not done:
 
 
     if repeaters:
+        # if we have repeaters we move them
         if norm(repeaters[-1].position-ground_station)>=desired_range:
+            #if the last added repeater is going out of rage from the ground station we add a new one
             repeaters.append(Repeater(ground_station))
         for r in range(len(repeaters)):
+            #for all the repeaters, if is the one following the payload we move towards it,
+            # otherwise we move towards the next repeater in the chain
             if r==0:
-                repeaters[r].move(np.array((0,0)))#todo: go to the boss
+                repeaters[r].move(traj_pos[time_step])#todo: go to the boss
             else:
-                a=0#todo: go to the previous repeater
+                repeaters[r].move(repeaters[r-1].position)#todo: go to the previous repeater
 
 
     else:
+    #if there are no repeaters, we check if the payload is on range.
+    # if not, we add a repeater
         if norm(traj_pos[time_step]-ground_station)>=desired_range:
-            repeaters.append(Repeater(ground_station))
+            pos=ground_station
+            repeaters.append(Repeater(pos))
 
 
 
