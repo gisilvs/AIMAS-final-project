@@ -1,0 +1,30 @@
+{
+  "bounding_polygon": [
+    [
+      0,
+      0.0
+    ],
+    [
+      70,
+      0
+    ],
+    [
+      70,
+      105
+    ],
+    [
+      0,
+      105
+    ]
+  ],
+  "ground_station": [0,0],
+  "sensor_range":30,
+  "desired_range":25,
+  "vehicle_L": 2,
+  "vehicle_a_max": 1.3,
+  "vehicle_dt": 0.1,
+  "vehicle_omega_max": 1.0,
+  "vehicle_phi_max": 0.6,
+  "vehicle_t": 0,
+  "vehicle_v_max": 2.1
+}
