@@ -138,6 +138,12 @@ while not done:
     if repeaters:
         if np.linalg.norm(repeaters[-1]-ground_station)>=desired_range:
             repeaters.append(ground_station)
+        for r in range(repeaters):
+            if r==0:
+                a=0#todo: go to the boss
+            else:
+                a=0#todo: go to the previous repeater
+
 
     else:
         if np.linalg.norm(traj_pos[time_step]-ground_station)>=desired_range:
@@ -148,5 +154,6 @@ while not done:
 
     time_step += 1
 
-    set_bg(repeaters,not_seen)
-    pg.display.flip()
+    if time_step%4==0:
+        set_bg(repeaters,not_seen)
+        pg.display.flip()
