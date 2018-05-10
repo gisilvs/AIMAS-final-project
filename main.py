@@ -1,8 +1,64 @@
 import json
 import pygame as pg
 import numpy as np
+from numpy.linalg import norm
 import time
 from shapely import geometry
+
+class Repeater():
+
+    def __init__(self, pos):
+        self.position = pos
+        self.velocity = np.array((0, 0))
+
+        self.error_prev = np.array((0, 0))
+
+    def control(self, pos_desired):
+        """
+        PD controller to provide a control signal / acceleration
+        :param pos_desired: Desired position to go towards
+        :return: Control signal u
+        """
+
+        # Proportional and differential gains # Todo: do these values make sense?
+        kp = 10; kd = 10
+
+        # PD controller
+        error = pos_desired - self.position
+        d_error = (error - self.error_prev) / dt
+        u = kp*error + kd * d_error
+
+        self.error_prev = error
+
+        return u
+
+    def move(self, pos_desired):
+        """
+        Update the position, velocity and acceleration
+        :param pos_desired:
+        :return:
+        """
+
+        # Get the control signal (acceleration)
+        u = self.control(pos_desired)
+
+        # Make sure it's not too large
+        if norm(u) > a_max:
+            u = u / norm(u) * a_max
+
+        # Update velocity
+        self.velocity += u * dt
+
+        # Make sure it's not too large
+        if norm(self.velocity) > v_max:
+            self.velocity = self.velocity / norm(self.velocity) * v_max
+
+        # Update position
+        self.position += self.velocity
+
+
+
+
 
 
 def discretize(min_x,max_x,min_y,max_y,n_squares):
@@ -87,8 +143,8 @@ ground_station=np.array(data["ground_station"])
 sensor_range=data["sensor_range"]
 desired_range=data["desired_range"]
 
-vehicle_a_max = data["vehicle_a_max"]
-vehicle_v_max = data["vehicle_v_max"]
+a_max = data["vehicle_a_max"]
+v_max = data["vehicle_v_max"]
 
 
 traj_t=traj["t"]
