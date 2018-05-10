@@ -196,7 +196,7 @@ while not done:
         # if we have repeaters we move them
         if norm(repeaters[-1].position-ground_station)>=desired_range:
             #if the last added repeater is going out of rage from the ground station we add a new one
-            repeaters.append(Repeater(ground_station))
+            repeaters.append(Repeater(ground_station.copy()))
         for r in range(len(repeaters)):
             #for all the repeaters, if is the one following the payload we move towards it,
             # otherwise we move towards the next repeater in the chain
@@ -210,8 +210,7 @@ while not done:
     #if there are no repeaters, we check if the payload is on range.
     # if not, we add a repeater
         if norm(traj_pos[time_step]-ground_station)>=desired_range:
-            pos=ground_station.copy()
-            repeaters.append(Repeater(pos))
+            repeaters.append(Repeater(ground_station.copy()))
 
 
 
