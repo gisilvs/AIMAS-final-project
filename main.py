@@ -14,19 +14,18 @@ class Repeater():
         self.error_prev = np.array((0, 0))
         self.index=index
 
-    def control(self, pos_desired, repeaters = [], obstacles = []):
+    def control(self, pos_desired, repeaters = [], boundary_centers = []):
         """
         PD controller to provide a control signal / acceleration
         :param pos_desired: Desired position to go towards
         :return: Control signal u
         """
+        # todo: choose good parameters
 
+        S_r = 10 # completely randomly set.
+        R_r = 2 # radius of repeater (obstacle)
 
-        kr = 50 # Repulsive gain
-        S = 10 # completely randomly set. todo: pick a good value.
-        R = 2 # radius of repeater (obstacle)
-
-        repulsive = np.array((0.0, 0.0))
+        repulsive_repeaters = np.array((0.0, 0.0))
 
         # Compute repulsive forces from repeaters
         if len(repeaters) > 1: # If more repeaters than this one
@@ -35,33 +34,60 @@ class Repeater():
 
                 # If repeater is far away, don't account for it at all
                 # or if we have priority
-                if d > S or d == 0 or self.index<repeater.index: # todo: do something smarter to avoid checking himself?
+                if d > S_r or d == 0 or self.index<repeater.index:
                     continue
 
                 # Direction from repeater to self, normalized
                 direction = (repeater.position - self.position) / d
 
                 # If very close, large repulsive force
-                if d <= R:
-                    repulsive += direction * 1000 # todo: not a good idea
+                if d <= R_r:
+                    repulsive_repeaters += direction * 1000
 
                 else:
-                    repulsive += ((S - d) / (S - R)) * direction
+                    repulsive_repeaters += ((S_r - d) / (S_r - R_r)) * direction
+
+        S_s = 10  # completely randomly set.
+        R_s = 5  # radius of repeater (obstacle) # todo: make it depend on side length
+
+        repulsive_shaded = np.array((0.0, 0.0))
+
+        # Compute repulsive forces from the boundary of non-seen area
+        for center in boundary_centers:
+            d = norm(center - self.position)
+
+            # If repeater is far away, don't account for it at all
+            # or if we have priority
+            if d > S_s:
+                continue
+
+            # Direction from repeater to self, normalized
+            direction = (center - self.position) / d
+
+            # If very close, large repulsive force
+            if d <= R_s:
+                repulsive_shaded += direction * 1000
+
+            else:
+                repulsive_shaded += ((S_s - d) / (S_s - R_s)) * direction
 
 
-        # Proportional and differential gains # Todo: do these values make sense?
+        # Proportional and differential gains
         kp = 10; kd = 10
+
+        # repulsive repeater gain, repulsive shaded gain
+        G_r = 50; G_s = 50
 
         # PD controller
         error = pos_desired - self.position
         d_error = (error - self.error_prev) / dt
-        u = kp * error + kd * d_error - kr * repulsive # todo: plus?
+        u = kp * error + kd * d_error - G_r * repulsive_repeaters - G_s * repulsive_shaded
 
         self.error_prev = error
 
         return u
 
-    def move(self, pos_desired, repeaters = []):
+    def move(self, pos_desired, repeaters = [], boundary_centers = []):
         """
         Update the position, velocity and acceleration
         :param pos_desired:
@@ -69,7 +95,7 @@ class Repeater():
         """
 
         # Get the control signal (acceleration)
-        u = self.control(pos_desired, repeaters)
+        u = self.control(pos_desired, repeaters, boundary_centers)
 
         # Make sure it's not too large
         if norm(u) > a_max:
@@ -101,9 +127,9 @@ def update_map(position, squares):
                     squares[square['i'],square['j']]=None
     return squares
 
-def find_boundaries(squares):
+def find_boundary(squares):
     indices=np.argwhere(squares==None)
-    boundaries=set()
+    boundary=set()
     for index in  indices:
         i,j=index
         xs=[]
@@ -118,14 +144,14 @@ def find_boundaries(squares):
             ys.append(j+1)
         for x in xs:
             if squares[x,j]!=None:
-                boundaries.add((squares[x,j]['i'],squares[x,j]['j']))
+                boundary.add((squares[x,j]['i'],squares[x,j]['j']))
             for y in ys:
                 if squares[i, y] != None:
-                    boundaries.add((squares[i,y]['i'],squares[i,y]['j']))
+                    boundary.add((squares[i,y]['i'],squares[i,y]['j']))
                 if squares[x,y] != None:
-                    boundaries.add((squares[x,y]['i'],squares[x,y]['j']))
+                    boundary.add((squares[x,y]['i'],squares[x,y]['j']))
 
-    return boundaries
+    return boundary
 
 def discretize(min_x,max_x,min_y,max_y,n_squares):
     xs=[min_x]
@@ -255,7 +281,10 @@ while not done:
     ## check if we see some square
     squares=update_map(traj_pos[time_step],squares)  
     ## Now we look for the boundary of the unseen area, to find points to use for the force field
-    boundaries=find_boundaries(squares)
+    boundary=find_boundary(squares)
+    boundary_centers = []
+    for boundary_index in boundary:
+        boundary_centers.append(squares[boundary_index]['center'])
 
 
 
@@ -268,9 +297,9 @@ while not done:
             #for all the repeaters, if is the one following the payload we move towards it,
             # otherwise we move towards the next repeater in the chain
             if r==0:
-                repeaters[r].move(traj_pos[time_step], repeaters)#todo: go to the boss
+                repeaters[r].move(traj_pos[time_step], repeaters, boundary_centers)#todo: go to the boss
             else:
-                repeaters[r].move(repeaters[r-1].position, repeaters)#todo: go to the previous repeater
+                repeaters[r].move(repeaters[r-1].position, repeaters, boundary_centers)#todo: go to the previous repeater
 
 
     else:
