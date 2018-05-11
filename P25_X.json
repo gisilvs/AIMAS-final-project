@@ -27,5 +27,5 @@
   "vehicle_phi_max": 0.6,
   "vehicle_t": 0,
   "vehicle_v_max": 0.1,
-  "scanning_range":10
+  "scanning_range":5
 }

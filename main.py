@@ -259,7 +259,7 @@ for point in bounding_polygon:
 
 sh_bounding_polygon=geometry.Polygon(bounding_polygon)
 min_x,min_y,max_x,max_y=sh_bounding_polygon.bounds
-squares=discretize(min_x,max_x,min_y,max_y,10)
+squares=discretize(min_x,max_x,min_y,max_y,30)
 
 repeaters=[]
 
@@ -313,6 +313,6 @@ while not done:
 
     time_step += 1
 
-    if time_step%10==0:
+    if time_step%5==0:
         set_bg(repeaters,squares)
         pg.display.flip()
