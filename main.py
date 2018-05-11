@@ -13,12 +13,39 @@ class Repeater():
 
         self.error_prev = np.array((0, 0))
 
-    def control(self, pos_desired):
+    def control(self, pos_desired, repeaters = [], obstacles = []):
         """
         PD controller to provide a control signal / acceleration
         :param pos_desired: Desired position to go towards
         :return: Control signal u
         """
+
+
+        kr = 2 # Repulsive gain
+        S = 10 # completely randomly set. todo: pick a good value.
+        R = 2 # radius of repeater (obstacle)
+
+        repulsive = np.array((0.0, 0.0))
+
+        # Compute repulsive forces from repeaters
+        if len(repeaters) > 1: # If more repeaters than this one
+            for repeater in repeaters: # Look at all repeaters except for this one. Assign indices? d == 0?
+                d = norm(repeater.position - self.position)
+
+                # If repeater is far away, don't account for it at all
+                if d > S or d == 0: # todo: do something smarter to avoid checking himself?
+                    continue
+
+                # Direction from repeater to self, normalized
+                direction = (repeater.position - self.position) / d
+
+                # If very close, large repulsive force
+                if d >= R:
+                    repulsive += direction * 1000 # todo: not a good idea
+
+                else:
+                    repulsive += ((S - d) / (S - R)) * direction
+
 
         # Proportional and differential gains # Todo: do these values make sense?
         kp = 10; kd = 10
@@ -26,13 +53,13 @@ class Repeater():
         # PD controller
         error = pos_desired - self.position
         d_error = (error - self.error_prev) / dt
-        u = kp*error + kd * d_error
+        u = kp * error + kd * d_error - kr * repulsive # todo: plus?
 
         self.error_prev = error
 
         return u
 
-    def move(self, pos_desired):
+    def move(self, pos_desired, repeaters = []):
         """
         Update the position, velocity and acceleration
         :param pos_desired:
@@ -40,7 +67,7 @@ class Repeater():
         """
 
         # Get the control signal (acceleration)
-        u = self.control(pos_desired)
+        u = self.control(pos_desired, repeaters)
 
         # Make sure it's not too large
         if norm(u) > a_max:
@@ -203,9 +230,9 @@ while not done:
             #for all the repeaters, if is the one following the payload we move towards it,
             # otherwise we move towards the next repeater in the chain
             if r==0:
-                repeaters[r].move(traj_pos[time_step])#todo: go to the boss
+                repeaters[r].move(traj_pos[time_step], repeaters)#todo: go to the boss
             else:
-                repeaters[r].move(repeaters[r-1].position)#todo: go to the previous repeater
+                repeaters[r].move(repeaters[r-1].position, repeaters)#todo: go to the previous repeater
 
 
     else:
@@ -219,6 +246,6 @@ while not done:
 
     time_step += 1
 
-    if time_step%2==0:
+    if time_step%10==0:
         set_bg(repeaters,not_seen)
         pg.display.flip()
