@@ -91,7 +91,6 @@ class Repeater():
 
 
 def discretize(min_x,max_x,min_y,max_y,n_squares):
-    squares=[]
     xs=[min_x]
     ys=[min_y]
     x=min_x
@@ -104,10 +103,12 @@ def discretize(min_x,max_x,min_y,max_y,n_squares):
         y+=x_side
         ys.append(y)
 
+    squares=np.empty((len(xs)-1,len(ys)-1),dtype=object)
     for i in range(len(xs)-1):
         for j in range(len(ys)-1):
             square=geometry.Polygon([(xs[i],ys[j]),(xs[i],ys[j+1]),(xs[i+1],ys[j+1]),(xs[i+1],ys[j])])
-            squares.append({'square':square,'center':np.array(square.centroid)})
+            #squares.append({'square':square,'center':np.array(square.centroid)})
+            squares[i,j]={'square':square,'center':np.array(square.centroid),'i':i,'j':j}
             a=0
     return squares
 
@@ -151,9 +152,11 @@ def set_bg(repeaters,not_seen):
             pg.draw.line(screen, (0, 0, 255), to_pygame(repeater.position + np.array([-0.8, 0.8])),
                      to_pygame(repeater.position + np.array([0.8, -0.8])), 3)
     s=pg.Surface((infoObject.current_w, infoObject.current_h),pg.SRCALPHA)
-    if not_seen:
-        for square in not_seen:
-            pg.draw.polygon(s,(100,100,100,128),list_to_pygame(list(np.array(square['square'].exterior.coords)[:-1])))
+    for i in range(not_seen.shape[0]):
+        for j in range(not_seen.shape[1]):
+            square = not_seen[i, j]
+            if square:
+                pg.draw.polygon(s,(100,100,100,128),list_to_pygame(list(np.array(square['square'].exterior.coords)[:-1])))
 
     screen.blit(s, (0, 0))
 # PyGame parameters
@@ -213,14 +216,16 @@ while not done:
         start = True
 
     ## check if we see some square
-    for square in not_seen:
-        if norm(traj_pos[time_step]-square['center'])<scanning_range:
-            seen=True
-            for vertex in list(np.array(square['square'].exterior.coords))[:-1]:
-                if norm(traj_pos[time_step]-square['center'])>=scanning_range:
+    for i  in range(not_seen.shape[0]):
+        for j in range (not_seen.shape[1]):
+            square=not_seen[i,j]
+            if square:
+                if norm(traj_pos[time_step]-square['center'])<scanning_range:
+                    seen=True
+                else:
                     seen=False
-            if seen:
-                not_seen.remove(square)
+                if seen:
+                    not_seen[square['i'],square['j']]=None
 
 
     if repeaters:
