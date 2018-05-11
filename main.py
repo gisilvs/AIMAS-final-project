@@ -88,7 +88,44 @@ class Repeater():
 
 
 
+def update_map(position, squares):
+    for i  in range(squares.shape[0]):
+        for j in range (squares.shape[1]):
+            square=squares[i,j]
+            if square:
+                if norm(position-square['center'])<scanning_range:
+                    seen=True
+                else:
+                    seen=False
+                if seen:
+                    squares[square['i'],square['j']]=None
+    return squares
 
+def find_boundaries(squares):
+    indices=np.argwhere(squares==None)
+    boundaries=set()
+    for index in  indices:
+        i,j=index
+        xs=[]
+        ys=[]
+        if i >0:
+            xs.append(i-1)
+        if i < squares.shape[0]-1:
+            xs.append(i+1)
+        if j >0:
+            ys.append(j-1)
+        if j < squares.shape[1]-1:
+            ys.append(j+1)
+        for x in xs:
+            if squares[x,j]!=None:
+                boundaries.add((squares[x,j]['i'],squares[x,j]['j']))
+            for y in ys:
+                if squares[i, y] != None:
+                    boundaries.add((squares[i,y]['i'],squares[i,y]['j']))
+                if squares[x,y] != None:
+                    boundaries.add((squares[x,y]['i'],squares[x,y]['j']))
+
+    return boundaries
 
 def discretize(min_x,max_x,min_y,max_y,n_squares):
     xs=[min_x]
@@ -123,7 +160,7 @@ def to_pygame(coords):
     return (int(coords[0] * 5 + width / 2 - 150), int(coords[1] * -5 + height / 2 + 200))
 
 
-def set_bg(repeaters,not_seen):
+def set_bg(repeaters,squares):
     '''set initial and final position'''
     screen.fill((255, 255, 255))
     '''for i in range(len(robots.locations)):
@@ -152,9 +189,9 @@ def set_bg(repeaters,not_seen):
             pg.draw.line(screen, (0, 0, 255), to_pygame(repeater.position + np.array([-0.8, 0.8])),
                      to_pygame(repeater.position + np.array([0.8, -0.8])), 3)
     s=pg.Surface((infoObject.current_w, infoObject.current_h),pg.SRCALPHA)
-    for i in range(not_seen.shape[0]):
-        for j in range(not_seen.shape[1]):
-            square = not_seen[i, j]
+    for i in range(squares.shape[0]):
+        for j in range(squares.shape[1]):
+            square = squares[i, j]
             if square:
                 pg.draw.polygon(s,(100,100,100,128),list_to_pygame(list(np.array(square['square'].exterior.coords)[:-1])))
 
@@ -196,7 +233,7 @@ for point in bounding_polygon:
 
 sh_bounding_polygon=geometry.Polygon(bounding_polygon)
 min_x,min_y,max_x,max_y=sh_bounding_polygon.bounds
-not_seen=discretize(min_x,max_x,min_y,max_y,10)
+squares=discretize(min_x,max_x,min_y,max_y,10)
 
 repeaters=[]
 
@@ -216,16 +253,10 @@ while not done:
         start = True
 
     ## check if we see some square
-    for i  in range(not_seen.shape[0]):
-        for j in range (not_seen.shape[1]):
-            square=not_seen[i,j]
-            if square:
-                if norm(traj_pos[time_step]-square['center'])<scanning_range:
-                    seen=True
-                else:
-                    seen=False
-                if seen:
-                    not_seen[square['i'],square['j']]=None
+    squares=update_map(traj_pos[time_step],squares)  
+    ## Now we look for the boundary of the unseen area, to find points to use for the force field
+    boundaries=find_boundaries(squares)
+
 
 
     if repeaters:
@@ -254,5 +285,5 @@ while not done:
     time_step += 1
 
     if time_step%10==0:
-        set_bg(repeaters,not_seen)
+        set_bg(repeaters,squares)
         pg.display.flip()
