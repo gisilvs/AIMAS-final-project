@@ -53,7 +53,7 @@ class Repeater():
 
     def get_repulsive(self, centers, S = 10, R = 3):
 
-        repulsive = np.array((0.0, 0.0))
+        repulsive = np.zeros(2)
 
         for center in centers:
             d = norm(center - self.position)
@@ -79,7 +79,7 @@ class Repeater():
 
     def get_repulsive_repeaters(self, repeaters, S = 10, R = 3):
 
-        repulsive = np.array((0.0, 0.0))
+        repulsive = np.zeros(2)
 
         # Compute repulsive forces from repeaters
         if len(repeaters) > 1:  # If more repeaters than this one
@@ -106,7 +106,7 @@ class Repeater():
 
     def get_repulsive_main(self, pos_main_drone, S = 10, R = 3):
 
-        repulsive = np.array((0.0, 0.0))
+        repulsive = np.zeros(2)
 
         d = norm(pos_main_drone - self.position)
 
@@ -223,7 +223,6 @@ def get_obstacle_centers(squares, obstacle_matrix):
                 centers.append(squares[i, j]['center'])
 
     return centers
-
 
 def find_boundary(squares):
 
