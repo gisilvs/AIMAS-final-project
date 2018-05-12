@@ -184,7 +184,7 @@ class Repeater():
         return u
 
 
-def update_map(position, squares, sh_bounding_lines, obstacle_matrix):
+def update_map(position, squares, sh_bounding_lines, obstacle_matrix,sh_obstacles):
 
     """
     Updates the discretized map when it is explored
@@ -200,11 +200,20 @@ def update_map(position, squares, sh_bounding_lines, obstacle_matrix):
                 center = square['center']
                 if norm(position-center) < scanning_range:
                     seen = True
-
-                    # Check if it intersects with obstacle / boundary
                     line = geometry.LineString([center, position])
-                    if line.intersects(sh_bounding_lines):
-                        obstacle_matrix[i, j] = 1
+                    for obstacle in sh_obstacles:
+                        if line.intersects(obstacle.boundary):
+                            seen=False
+                            break
+
+                    if seen:
+                        # Check if it intersects with obstacle / boundary
+
+                        if line.intersects(sh_bounding_lines):
+                            obstacle_matrix[i, j] = 1
+                        for obstacle in sh_obstacles:
+                            if square['square'].intersects(obstacle.boundary):# or square['square'].touches(obstacle.boundary):
+                                obstacle_matrix[i, j] = 1
 
                 else:
                     seen=False
@@ -299,7 +308,7 @@ def discretize(bounds, n_squares):
         for j in range(len(ys)-1):
             vertices = [(xs[i],ys[j]),(xs[i],ys[j+1]),(xs[i+1],ys[j+1]),(xs[i+1],ys[j])]
             square=geometry.Polygon(vertices)
-            squares[i,j]={'vertices':vertices, 'center':np.array(square.centroid), 'i':i,'j':j,'seen':False}
+            squares[i,j]={'vertices':vertices, 'center':np.array(square.centroid), 'i':i,'j':j,'seen':False, 'square':square}
     return squares
 
 def get_bounding_lines(bounding_polygon):
@@ -381,7 +390,7 @@ def set_bg(repeaters,squares,obstacle_matrix):
             if not square['seen']:
                 pg.draw.polygon(s,(100,100,100,128), list_to_pygame(square['vertices']))
             if obstacle_matrix[i,j]==1:
-                pg.draw.polygon(s, (222, 184, 135), list_to_pygame(square['vertices']))
+                pg.draw.polygon(s, (222, 184, 135,128), list_to_pygame(square['vertices']))
 
     for i in range(1,len(bounding_lines)):
         pg.draw.line(screen,(0,0,0),to_pygame(bounding_lines[i-1]),to_pygame(bounding_lines[i]))
@@ -419,9 +428,13 @@ ground_station=traj_pos[0]
 dt=0.1
 
 obstacles=[]
+sh_obstacles=[]
 for d in data:
     if "obstacle" in d:
-        obstacles.append(data[d])
+        obstacle=data[d]
+        obstacles.append(obstacle)
+        sh_obstacles.append(geometry.Polygon(obstacle))
+
 
 pg_bounding_polygon = []
 for point in bounding_polygon:
@@ -457,7 +470,7 @@ while not done:
         start = True
 
     ## check if we see some square
-    squares, obstacle_matrix = update_map(traj_pos[time_step],squares, sh_bounding_lines, obstacle_matrix)
+    squares, obstacle_matrix = update_map(traj_pos[time_step],squares, sh_bounding_lines, obstacle_matrix,sh_obstacles)
     ## Now we look for the boundary of the unseen area, to find points to use for the force field
     boundary_centers = find_boundary(squares)
     obstacle_centers = get_obstacle_centers(squares, obstacle_matrix)
