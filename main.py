@@ -163,7 +163,7 @@ class Repeater():
         G_r = 50; G_s = 50
 
         # Accumulated repulsive force from obstacles, other drones and unseen area.
-        repulsive = - G_r * repulsive_repeaters - G_s * repulsive_shaded - G_r * repulsive_main_drone
+        repulsive = - G_r * repulsive_repeaters - G_s * repulsive_shaded - G_s * repulsive_obstacles -G_r * repulsive_main_drone
 
         # PD controller
         error = pos_desired - self.position
