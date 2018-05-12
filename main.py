@@ -7,6 +7,10 @@ from shapely import geometry
 
 class Repeater():
 
+    """
+    A class for the repeater drones
+    """
+
     def __init__(self, pos,index):
         self.position = pos
         self.velocity = np.array((0, 0), dtype=float)
@@ -15,9 +19,13 @@ class Repeater():
         self.index=index
 
     def control(self, pos_desired, repeaters = [], boundary_centers = []):
+
         """
         PD controller to provide a control signal / acceleration
         :param pos_desired: Desired position to go towards
+        :param repeaters: A list with all the repeater drones. To avoid collision
+        :param boundary_centers: A list with the center coordinates of the boundary
+        between seen and unseen area
         :return: Control signal u
         """
         # todo: choose good parameters
@@ -88,9 +96,13 @@ class Repeater():
         return u
 
     def move(self, pos_desired, repeaters = [], boundary_centers = []):
+
         """
-        Update the position, velocity and acceleration
-        :param pos_desired:
+        Updates the position and velocity of the repeater.
+        :param pos_desired: Desired position to go towards
+        :param repeaters: A list with all the repeater drones. To avoid collision
+        :param boundary_centers: A list with the center coordinates of the boundary
+        between seen and unseen area
         :return:
         """
 
@@ -115,6 +127,14 @@ class Repeater():
 
 
 def update_map(position, squares):
+
+    """
+    Updates the discretized map when it is explored
+    :param position: Coordinates of the main drone
+    :param squares: Array with elements that are squares if they are not seen, otherwise None
+    :return: Updated Array with squares
+    """
+
     for i  in range(squares.shape[0]):
         for j in range (squares.shape[1]):
             square=squares[i,j]
@@ -128,6 +148,13 @@ def update_map(position, squares):
     return squares
 
 def find_boundary(squares):
+
+    """
+    Function that finds the squares on the boundary between the seen and the unseen map
+    :param squares: Array with elements that are squares if they are not seen, otherwise None
+    :return: A set with center coordinates for the boundary squares
+    """
+
     indices=np.argwhere(squares==None)
     boundary=set()
     for index in  indices:
@@ -153,7 +180,17 @@ def find_boundary(squares):
 
     return boundary
 
-def discretize(min_x,max_x,min_y,max_y,n_squares):
+def discretize(bounds, n_squares):
+
+    """
+    A function to discretize the whole map
+    :param bounds: A tuple containing (min_x, max_x, min_y, max_y) of the bounds of the bounding polygon
+    :param n_squares: Number of squares along the x-axis
+    :return: Array of squares
+    """
+
+    min_x, min_y, max_x, max_y = bounds
+
     xs=[min_x]
     ys=[min_y]
     x=min_x
@@ -182,12 +219,20 @@ def list_to_pygame(list_of_points):
     return  pg_list_of_points
 
 def to_pygame(coords):
-    '''Convert coordinates into pygame coordinates'''
+
+    """
+    Convert coordinates into pygame coordinates
+    """
+
     return (int(coords[0] * 5 + width / 2 - 150), int(coords[1] * -5 + height / 2 + 200))
 
 
 def set_bg(repeaters,squares):
-    '''set initial and final position'''
+
+    """
+    set initial and final position
+    """
+
     screen.fill((255, 255, 255))
     '''for i in range(len(robots.locations)):
         pg_pos = to_pygame(robots.locations[i])
@@ -258,8 +303,9 @@ for point in bounding_polygon:
     pg_bounding_polygon.append(to_pygame(point))
 
 sh_bounding_polygon=geometry.Polygon(bounding_polygon)
-min_x,min_y,max_x,max_y=sh_bounding_polygon.bounds
-squares=discretize(min_x,max_x,min_y,max_y,30)
+bounds = sh_bounding_polygon.bounds
+n_squares = 30
+squares=discretize(bounds, n_squares)
 
 repeaters=[]
 
