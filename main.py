@@ -22,7 +22,7 @@ class Repeater():
         self.percistance_counter = 0
         self.noise_direction = np.zeros(2)
 
-    def move(self, pos_desired, pos_main_drone, repeaters = [], boundary_centers = []):
+    def move(self, pos_desired, pos_main_drone, repeaters, boundary_centers, obstacle_centers):
 
         """
         Updates the position and velocity of the repeater.
@@ -34,7 +34,7 @@ class Repeater():
         """
 
         # Get the control signal (acceleration)
-        u = self.control(pos_desired, pos_main_drone, repeaters, boundary_centers)
+        u = self.control(pos_desired, pos_main_drone, repeaters, boundary_centers, obstacle_centers)
 
         # Make sure it's not too large
         if norm(u) > a_max:
@@ -50,7 +50,77 @@ class Repeater():
         # Update position
         self.position += self.velocity
 
-    def control(self, pos_desired, pos_main_drone, repeaters = [], boundary_centers = []):
+    def get_repulsive(self, centers, S = 10, R = 5):
+
+        repulsive = np.array((0.0, 0.0))
+
+        for center in centers:
+            d = norm(center - self.position)
+
+            # If repeater is far away, don't account for it at all
+            # or if we have priority
+            if d > S:
+                continue
+
+            # Direction from repeater to self, normalized
+            direction = (center - self.position) / d
+
+            # If very close, large repulsive force
+            if d <= R:
+                repulsive += direction * 1000
+
+            else:
+                repulsive += ((S - d) / (S - R)) * direction
+
+        return repulsive
+
+
+    def get_repulsive_repeaters(self, repeaters, S = 10, R = 2):
+
+        repulsive = np.array((0.0, 0.0))
+
+        # Compute repulsive forces from repeaters
+        if len(repeaters) > 1:  # If more repeaters than this one
+            for repeater in repeaters:  # Look at all repeaters except for this one. Assign indices? d == 0?
+                d = norm(repeater.position - self.position)
+
+                # If repeater is far away, don't account for it at all
+                # or if we have priority
+                if d > S or d == 0 or self.index < repeater.index:
+                    continue
+
+                # Direction from repeater to self, normalized
+                direction = (repeater.position - self.position) / d
+
+                # If very close, large repulsive force
+                if d <= R:
+                    repulsive += direction * 1000
+
+                else:
+                    repulsive += ((S - d) / (S - R)) * direction
+
+        return repulsive
+
+    def get_repulsive_main(self, pos_main_drone, S = 10, R = 2):
+
+        repulsive = np.array((0.0, 0.0))
+
+        d = norm(pos_main_drone - self.position)
+
+        # Direction from main drone to self, normalized
+        direction = (pos_main_drone - self.position) / d
+
+        # If very close, large repulsive force
+        if d <= R:
+            repulsive += direction * 1000
+
+        else:
+            repulsive += ((S - d) / (S - R)) * direction
+
+        return repulsive
+
+
+    def control(self, pos_desired, pos_main_drone, repeaters, boundary_centers, obstacle_centers):
 
         """
         PD controller to provide a control signal / acceleration
@@ -60,72 +130,23 @@ class Repeater():
         between seen and unseen area
         :return: Control signal u
         """
-        # todo: choose good parameters
 
-        S_r = 10 # completely randomly set.
-        R_r = 2 # radius of repeater (obstacle)
+        # todo: choose good parameters for the gains
 
-        repulsive_repeaters = np.array((0.0, 0.0))
+        ### Repeaters
+        repulsive_repeaters = self.get_repulsive_repeaters(repeaters)
 
-        # Compute repulsive forces from repeaters
-        if len(repeaters) > 1: # If more repeaters than this one
-            for repeater in repeaters: # Look at all repeaters except for this one. Assign indices? d == 0?
-                d = norm(repeater.position - self.position)
+        #### Boundary of non-seen
+        repulsive_shaded = self.get_repulsive(boundary_centers)
 
-                # If repeater is far away, don't account for it at all
-                # or if we have priority
-                if d > S_r or d == 0 or self.index<repeater.index:
-                    continue
+        #### Obstacles
+        repulsive_obstacles = self.get_repulsive(obstacle_centers)
 
-                # Direction from repeater to self, normalized
-                direction = (repeater.position - self.position) / d
-
-                # If very close, large repulsive force
-                if d <= R_r:
-                    repulsive_repeaters += direction * 1000
-
-                else:
-                    repulsive_repeaters += ((S_r - d) / (S_r - R_r)) * direction
-
-        S_s = 10  # completely randomly set.
-        R_s = 5  # radius of repeater (obstacle) # todo: make it depend on side length
-
-        repulsive_shaded = np.array((0.0, 0.0))
-
-        # Compute repulsive forces from the boundary of non-seen area
-        for center in boundary_centers:
-            d = norm(center - self.position)
-
-            # If repeater is far away, don't account for it at all
-            # or if we have priority
-            if d > S_s:
-                continue
-
-            # Direction from repeater to self, normalized
-            direction = (center - self.position) / d
-
-            # If very close, large repulsive force
-            if d <= R_s:
-                repulsive_shaded += direction * 1000
-
-            else:
-                repulsive_shaded += ((S_s - d) / (S_s - R_s)) * direction
-
-        # Compute repulsive force from the main drone
-        repulsive_main_drone = np.array((0.0, 0.0))
-        d = norm(pos_main_drone - self.position)
-
-        # Direction from main drone to self, normalized
-        direction = (pos_main_drone - self.position) / d
-
-        # If very close, large repulsive force
-        if d <= R_r:
-            repulsive_main_drone += direction * 1000
-
-        else:
-            repulsive_main_drone += ((S_r - d) / (S_r - R_r)) * direction
+        #### Main drone
+        repulsive_main_drone = self.get_repulsive_main(pos_main_drone)
 
 
+        ### Noise
         G_n = 10
 
         if self.percistance_counter % 10 == 0:
@@ -133,8 +154,6 @@ class Repeater():
             self.noise_direction = noise_direction / norm(noise_direction)
 
         self.percistance_counter += 1
-
-
 
 
         # Proportional and differential gains
@@ -188,6 +207,18 @@ def update_map(position, squares, sh_bounding_lines, obstacle_matrix):
                     squares[square['i'],square['j']]['seen']=True
 
     return squares, obstacle_matrix
+
+def get_obstacle_centers(squares, obstacle_matrix):
+
+    n, m = obstacle_matrix.shape
+    centers = []
+    for i in range(n):
+        for j in range(m):
+            if obstacle_matrix[i, j]:
+                centers.append(squares[i, j]['center'])
+
+    return centers
+
 
 def find_boundary(squares):
 
@@ -417,6 +448,7 @@ while not done:
     squares, obstacle_matrix = update_map(traj_pos[time_step],squares, sh_bounding_lines, obstacle_matrix)
     ## Now we look for the boundary of the unseen area, to find points to use for the force field
     boundary_centers = find_boundary(squares)
+    obstacle_centers = get_obstacle_centers(squares, obstacle_matrix)
 
 
     pos_main_drone = traj_pos[time_step]
@@ -431,9 +463,10 @@ while not done:
             # otherwise we move towards the next repeater in the chain
             if r==0:
                 pos_desired = traj_pos[time_step] # todo: here do the optimization?
-                repeaters[r].move(pos_desired, pos_main_drone, repeaters, boundary_centers)#todo: go to the boss
+                repeaters[r].move(pos_desired, pos_main_drone, repeaters, boundary_centers, obstacle_centers)#todo: go to the boss
             else:
-                repeaters[r].move(repeaters[r-1].position, pos_main_drone, repeaters, boundary_centers)#todo: go to the previous repeater
+                repeaters[r].move(repeaters[r-1].position, pos_main_drone,
+                                  repeaters, boundary_centers, obstacle_centers)#todo: go to the previous repeater
 
 
     else:
