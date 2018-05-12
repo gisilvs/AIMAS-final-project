@@ -392,7 +392,7 @@ sh_bounding_lines=geometry.LineString(bounding_lines)
 
 
 bounds = sh_bounding_polygon.bounds
-n_squares = 30
+n_squares = 40
 squares=discretize(bounds, n_squares)
 obstacle_matrix = np.zeros(squares.shape)
 
