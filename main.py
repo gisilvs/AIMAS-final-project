@@ -172,20 +172,20 @@ def update_map(position, squares, sh_bounding_polygon, obstacle_matrix):
     for i  in range(squares.shape[0]):
         for j in range (squares.shape[1]):
             square=squares[i,j]
-            if square:
+            if not square['seen']:
                 center = square['center']
                 if norm(position-center) < scanning_range:
                     seen = True
 
                     # Check if it intersects with obstacle / boundary
-                    line = geometry.LineString([geometry.Point(center), geometry.Point(position)])
-                    if line.intersects(sh_bounding_polygon):
+                    line = geometry.LineString([center, position])
+                    if line.intersects(sh_bounding_polygon.exterior):
                         obstacle_matrix[i, j] = 1
 
                 else:
                     seen=False
                 if seen:
-                    squares[square['i'],square['j']]=None
+                    squares[square['i'],square['j']]['seen']=True
 
     return squares, obstacle_matrix
 
@@ -196,14 +196,18 @@ def find_boundary(squares):
     :param squares: Array with elements that are squares if they are not seen, otherwise None
     :return: A list with center coordinates for the boundary squares
     """
+    indices=[]
+    for i,row in enumerate(squares):
+        for j,square in enumerate (row):
+            if square['seen']:
+               indices.append((i,j))
 
-    indices=np.argwhere(squares == None)
     boundary=set()
     for index in indices:
-        i, j = index
-        xs = []
-        ys = []
-        if i > 0:
+        i,j=index
+        xs=[]
+        ys=[]
+        if i >0:
             xs.append(i-1)
         if i < squares.shape[0] - 1:
             xs.append(i+1)
@@ -212,13 +216,13 @@ def find_boundary(squares):
         if j < squares.shape[1] - 1:
             ys.append(j+1)
         for x in xs:
-            if squares[x, j] != None:
+            if not squares[x,j]['seen']:
                 boundary.add((squares[x,j]['i'],squares[x,j]['j']))
             for y in ys:
-                if squares[i, y] != None:
-                    boundary.add((squares[i, y]['i'],squares[i, y]['j']))
-                if squares[x, y] != None:
-                    boundary.add((squares[x, y]['i'],squares[x, y]['j']))
+                if not squares[i, y]['seen']:
+                    boundary.add((squares[i,y]['i'],squares[i,y]['j']))
+                if not squares[x,y]['seen']:
+                    boundary.add((squares[x,y]['i'],squares[x,y]['j']))
 
     boundary_centers = []
     for boundary_index in boundary:
@@ -260,8 +264,31 @@ def discretize(bounds, n_squares):
         for j in range(len(ys)-1):
             vertices = [(xs[i],ys[j]),(xs[i],ys[j+1]),(xs[i+1],ys[j+1]),(xs[i+1],ys[j])]
             square=geometry.Polygon(vertices)
-            squares[i,j]={'square':vertices, 'center':np.array(square.centroid), 'i':i,'j':j}
+            squares[i,j]={'square':vertices, 'center':np.array(square.centroid), 'i':i,'j':j,'seen':False}
     return squares
+
+def bounding_lines(bounding_polygon):
+
+    """
+    Creates the bounding lines for the bounding polygon with a small opening in origin
+    :param bounding_polygon: List of coords for the vertices for the bounding polygon
+    :return: List of coords for the vertices, with opening
+    """
+
+    first_point = np.array(bounding_polygon[0])
+    second_point = np.array(bounding_polygon[1])
+    last_point = np.array(bounding_polygon[-1])
+    dir1 = (second_point - first_point) / norm(second_point - first_point)
+    dir2 = (last_point - first_point) / norm(last_point - first_point)
+
+    bounding_lines = [first_point + dir1]
+    for point in bounding_polygon[1:]:
+        point = np.array(point)
+        bounding_lines.append(point)
+
+    bounding_lines.append(first_point + dir2)
+
+    return bounding_lines
 
 def list_to_pygame(list_of_points):
     pg_list_of_points=[]
@@ -278,7 +305,7 @@ def to_pygame(coords):
     return (int(coords[0] * 5 + width / 2 - 150), int(coords[1] * -5 + height / 2 + 200))
 
 
-def set_bg(repeaters,squares):
+def set_bg(repeaters,squares,obstacle_matrix):
 
     """
     set initial and final position
@@ -314,8 +341,10 @@ def set_bg(repeaters,squares):
     for i in range(squares.shape[0]):
         for j in range(squares.shape[1]):
             square = squares[i, j]
-            if square:
+            if not square['seen']:
                 pg.draw.polygon(s,(100,100,100,128), list_to_pygame(square['square']))
+            if obstacle_matrix[i,j]==1:
+                pg.draw.polygon(screen, (222, 184, 135), list_to_pygame(square['square']))
 
     screen.blit(s, (0, 0))
 # PyGame parameters
@@ -345,7 +374,7 @@ traj_theta=traj["theta"]
 traj_x=traj["x"]
 traj_y=traj["y"]
 traj_pos=np.array(list(zip(traj_x,traj_y)))
-traj_pos-=traj_pos[0]
+traj_pos-=traj_pos[0]+np.array((0.1,0.1))
 
 dt=0.1
 
@@ -354,6 +383,12 @@ for point in bounding_polygon:
     pg_bounding_polygon.append(to_pygame(point))
 
 sh_bounding_polygon=geometry.Polygon(bounding_polygon)
+
+bounding_lines = bounding_lines(bounding_polygon)
+sh_bounding_lines=geometry.LineString(bounding_lines)
+
+
+
 bounds = sh_bounding_polygon.bounds
 n_squares = 30
 squares=discretize(bounds, n_squares)
@@ -411,5 +446,5 @@ while not done:
     time_step += 1
 
     if time_step%5==0:
-        set_bg(repeaters,squares)
+        set_bg(repeaters,squares,obstacle_matrix)
         pg.display.flip()
