@@ -194,33 +194,37 @@ def find_boundary(squares):
     """
     Function that finds the squares on the boundary between the seen and the unseen map
     :param squares: Array with elements that are squares if they are not seen, otherwise None
-    :return: A set with center coordinates for the boundary squares
+    :return: A list with center coordinates for the boundary squares
     """
 
-    indices=np.argwhere(squares==None)
+    indices=np.argwhere(squares == None)
     boundary=set()
-    for index in  indices:
-        i,j=index
-        xs=[]
-        ys=[]
-        if i >0:
+    for index in indices:
+        i, j = index
+        xs = []
+        ys = []
+        if i > 0:
             xs.append(i-1)
-        if i < squares.shape[0]-1:
+        if i < squares.shape[0] - 1:
             xs.append(i+1)
-        if j >0:
+        if j > 0:
             ys.append(j-1)
-        if j < squares.shape[1]-1:
+        if j < squares.shape[1] - 1:
             ys.append(j+1)
         for x in xs:
-            if squares[x,j]!=None:
+            if squares[x, j] != None:
                 boundary.add((squares[x,j]['i'],squares[x,j]['j']))
             for y in ys:
                 if squares[i, y] != None:
-                    boundary.add((squares[i,y]['i'],squares[i,y]['j']))
-                if squares[x,y] != None:
-                    boundary.add((squares[x,y]['i'],squares[x,y]['j']))
+                    boundary.add((squares[i, y]['i'],squares[i, y]['j']))
+                if squares[x, y] != None:
+                    boundary.add((squares[x, y]['i'],squares[x, y]['j']))
 
-    return boundary
+    boundary_centers = []
+    for boundary_index in boundary:
+        boundary_centers.append(squares[boundary_index]['center'])
+
+    return boundary_centers
 
 def discretize(bounds, n_squares):
 
@@ -375,11 +379,7 @@ while not done:
     ## check if we see some square
     squares, obstacle_matrix = update_map(traj_pos[time_step],squares, sh_bounding_polygon, obstacle_matrix)
     ## Now we look for the boundary of the unseen area, to find points to use for the force field
-    boundary=find_boundary(squares)
-    boundary_centers = []
-    for boundary_index in boundary:
-        boundary_centers.append(squares[boundary_index]['center'])
-
+    boundary_centers = find_boundary(squares)
 
 
     pos_main_drone = traj_pos[time_step]
