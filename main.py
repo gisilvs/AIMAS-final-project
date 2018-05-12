@@ -141,46 +141,43 @@ class Repeater():
         """
 
         # todo: choose good parameters for the gains
+        # Proportional and differential gains
+        kp = 10
+        kd = 10
 
-        ### Repeaters
-        repulsive_repeaters = self.get_repulsive_repeaters(repeaters)
-
-        #### Boundary of non-seen
-        repulsive_shaded = self.get_repulsive(boundary_centers)
-
-        #### Obstacles
-        repulsive_obstacles = self.get_repulsive(obstacle_centers)
-
-        #### Main drone
-        repulsive_main_drone = self.get_repulsive_main(pos_main_drone)
-
-        ### Noise
-        noise = self.get_noise()
-
+        # repulsive repeater gain, repulsive shaded gain, noise gain
+        G_r = 1
+        G_s = 1
         G_n = 0.5
 
+        ### Repeaters
+        repulsive_repeaters = G_r * self.get_repulsive_repeaters(repeaters)
 
-        # Proportional and differential gains
-        kp = 10; kd = 10
+        #### Boundary of non-seen
+        repulsive_shaded = G_s * self.get_repulsive(boundary_centers)
 
-        # repulsive repeater gain, repulsive shaded gain
-        G_r = 1; G_s = 1
+        #### Obstacles
+        repulsive_obstacles = G_s * self.get_repulsive(obstacle_centers)
+
+        #### Main drone
+        repulsive_main_drone = G_r * self.get_repulsive_main(pos_main_drone)
+
+        ### Noise
+        noise = G_n * self.get_noise()
 
         # Accumulated repulsive force from obstacles, other drones and unseen area.
-        repulsive = - G_r * repulsive_repeaters - G_s * repulsive_shaded - G_s * repulsive_obstacles - G_r * repulsive_main_drone
+        repulsive = - repulsive_repeaters - repulsive_shaded - repulsive_obstacles - repulsive_main_drone
 
         # PD controller
         error = pos_desired - self.position
         d_error = (error - self.error_prev) / dt
 
         # Control signal
-        u = kp * error + kd * d_error + repulsive + G_n * noise
+        u = kp * error + kd * d_error + repulsive + noise
 
         self.error_prev = error
 
         return u
-
-
 
 
 def update_map(position, squares, sh_bounding_lines, obstacle_matrix):
