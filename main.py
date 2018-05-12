@@ -160,7 +160,7 @@ class Repeater():
 
 
 
-def update_map(position, squares, sh_bounding_polygon, obstacle_matrix):
+def update_map(position, squares, sh_bounding_lines, obstacle_matrix):
 
     """
     Updates the discretized map when it is explored
@@ -179,7 +179,7 @@ def update_map(position, squares, sh_bounding_polygon, obstacle_matrix):
 
                     # Check if it intersects with obstacle / boundary
                     line = geometry.LineString([center, position])
-                    if line.intersects(sh_bounding_polygon.exterior):
+                    if line.intersects(sh_bounding_lines):
                         obstacle_matrix[i, j] = 1
 
                 else:
@@ -267,7 +267,7 @@ def discretize(bounds, n_squares):
             squares[i,j]={'square':vertices, 'center':np.array(square.centroid), 'i':i,'j':j,'seen':False}
     return squares
 
-def bounding_lines(bounding_polygon):
+def get_bounding_lines(bounding_polygon):
 
     """
     Creates the bounding lines for the bounding polygon with a small opening in origin
@@ -281,12 +281,12 @@ def bounding_lines(bounding_polygon):
     dir1 = (second_point - first_point) / norm(second_point - first_point)
     dir2 = (last_point - first_point) / norm(last_point - first_point)
 
-    bounding_lines = [first_point + dir1]
+    bounding_lines = [first_point + 2*dir1]
     for point in bounding_polygon[1:]:
         point = np.array(point)
         bounding_lines.append(point)
 
-    bounding_lines.append(first_point + dir2)
+    bounding_lines.append(first_point + 2*dir2)
 
     return bounding_lines
 
@@ -320,7 +320,7 @@ def set_bg(repeaters,squares,obstacle_matrix):
                 pg.draw.line(screen,robots.colors[i],to_pygame(robots.all_locations[p-1][i]),to_pygame(robots.all_locations[p][i]))'''
     for i in range(1,len(traj_pos)):
         pg.draw.line(screen,(0,0,0),to_pygame(traj_pos[i-1]),to_pygame(traj_pos[i]))
-    pg.draw.polygon(screen, (0, 0, 0), pg_bounding_polygon, 1)
+    #pg.draw.polygon(screen, (0, 0, 0), pg_bounding_polygon, 1)
     '''for pos in vs.desired_pos:
         pg_pos = to_pygame(pos)
         pg.draw.circle(screen, (0, 0, 255), (pg_pos[0], pg_pos[1]), 3, 1)'''
@@ -346,6 +346,8 @@ def set_bg(repeaters,squares,obstacle_matrix):
             if obstacle_matrix[i,j]==1:
                 pg.draw.polygon(screen, (222, 184, 135), list_to_pygame(square['square']))
 
+    for i in range(1,len(bounding_lines)):
+        pg.draw.line(screen,(0,0,0),to_pygame(bounding_lines[i-1]),to_pygame(bounding_lines[i]))
     screen.blit(s, (0, 0))
 # PyGame parameters
 pg.init()
@@ -374,7 +376,7 @@ traj_theta=traj["theta"]
 traj_x=traj["x"]
 traj_y=traj["y"]
 traj_pos=np.array(list(zip(traj_x,traj_y)))
-traj_pos-=traj_pos[0]+np.array((0.1,0.1))
+traj_pos-=traj_pos[0]+np.array((-1,-1))
 
 dt=0.1
 
@@ -384,7 +386,7 @@ for point in bounding_polygon:
 
 sh_bounding_polygon=geometry.Polygon(bounding_polygon)
 
-bounding_lines = bounding_lines(bounding_polygon)
+bounding_lines = get_bounding_lines(bounding_polygon)
 sh_bounding_lines=geometry.LineString(bounding_lines)
 
 
@@ -412,7 +414,7 @@ while not done:
         start = True
 
     ## check if we see some square
-    squares, obstacle_matrix = update_map(traj_pos[time_step],squares, sh_bounding_polygon, obstacle_matrix)
+    squares, obstacle_matrix = update_map(traj_pos[time_step],squares, sh_bounding_lines, obstacle_matrix)
     ## Now we look for the boundary of the unseen area, to find points to use for the force field
     boundary_centers = find_boundary(squares)
 
