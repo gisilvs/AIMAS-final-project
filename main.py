@@ -50,6 +50,7 @@ class Repeater():
         # Update position
         self.position += self.velocity
 
+
     def get_repulsive(self, centers, S = 10, R = 3):
 
         repulsive = np.array((0.0, 0.0))
@@ -73,6 +74,7 @@ class Repeater():
                 repulsive += ((S - d) / (S - R)) * direction
 
         return repulsive
+
 
 
     def get_repulsive_repeaters(self, repeaters, S = 10, R = 3):
@@ -100,6 +102,7 @@ class Repeater():
                     repulsive += ((S - d) / (S - R)) * direction
 
         return repulsive
+
 
     def get_repulsive_main(self, pos_main_drone, S = 10, R = 3):
 
@@ -164,6 +167,7 @@ class Repeater():
 
         ### Noise
         noise = G_n * self.get_noise()
+
 
         # Accumulated repulsive force from obstacles, other drones and unseen area.
         repulsive = - repulsive_repeaters - repulsive_shaded - repulsive_obstacles - repulsive_main_drone
@@ -296,7 +300,7 @@ def discretize(bounds, n_squares):
         for j in range(len(ys)-1):
             vertices = [(xs[i],ys[j]),(xs[i],ys[j+1]),(xs[i+1],ys[j+1]),(xs[i+1],ys[j])]
             square=geometry.Polygon(vertices)
-            squares[i,j]={'square':vertices, 'center':np.array(square.centroid), 'i':i,'j':j,'seen':False}
+            squares[i,j]={'vertices':vertices, 'center':np.array(square.centroid), 'i':i,'j':j,'seen':False}
     return squares
 
 def get_bounding_lines(bounding_polygon):
@@ -352,6 +356,8 @@ def set_bg(repeaters,squares,obstacle_matrix):
                 pg.draw.line(screen,robots.colors[i],to_pygame(robots.all_locations[p-1][i]),to_pygame(robots.all_locations[p][i]))'''
     for i in range(1,len(traj_pos)):
         pg.draw.line(screen,(0,0,0),to_pygame(traj_pos[i-1]),to_pygame(traj_pos[i]))
+
+    [pg.draw.polygon(screen, (0, 0, 0), list_to_pygame(obstacle), 0) for obstacle in obstacles]
     #pg.draw.polygon(screen, (0, 0, 0), pg_bounding_polygon, 1)
     '''for pos in vs.desired_pos:
         pg_pos = to_pygame(pos)
@@ -374,9 +380,9 @@ def set_bg(repeaters,squares,obstacle_matrix):
         for j in range(squares.shape[1]):
             square = squares[i, j]
             if not square['seen']:
-                pg.draw.polygon(s,(100,100,100,128), list_to_pygame(square['square']))
+                pg.draw.polygon(s,(100,100,100,128), list_to_pygame(square['vertices']))
             if obstacle_matrix[i,j]==1:
-                pg.draw.polygon(screen, (222, 184, 135), list_to_pygame(square['square']))
+                pg.draw.polygon(s, (222, 184, 135), list_to_pygame(square['vertices']))
 
     for i in range(1,len(bounding_lines)):
         pg.draw.line(screen,(0,0,0),to_pygame(bounding_lines[i-1]),to_pygame(bounding_lines[i]))
@@ -409,8 +415,14 @@ traj_x=traj["x"]
 traj_y=traj["y"]
 traj_pos=np.array(list(zip(traj_x,traj_y)))
 traj_pos-=traj_pos[0]+np.array((-1,-1))
+ground_station=traj_pos[0]
 
 dt=0.1
+
+obstacles=[]
+for d in data:
+    if "obstacle" in d:
+        obstacles.append(data[d])
 
 pg_bounding_polygon = []
 for point in bounding_polygon:
@@ -424,7 +436,7 @@ sh_bounding_lines=geometry.LineString(bounding_lines)
 
 
 bounds = sh_bounding_polygon.bounds
-n_squares = 30
+n_squares = 40
 squares=discretize(bounds, n_squares)
 obstacle_matrix = np.zeros(squares.shape)
 
