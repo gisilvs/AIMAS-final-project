@@ -122,6 +122,15 @@ class Repeater():
 
         return repulsive
 
+    def get_noise(self):
+
+        if self.percistance_counter % 10 == 0:
+            noise_direction = np.random.normal(0, 1, 2)
+            self.noise_direction = noise_direction / norm(noise_direction)
+
+        self.percistance_counter += 1
+
+        return self.noise_direction
 
     def control(self, pos_desired, pos_main_drone, repeaters, boundary_centers, obstacle_centers):
 
@@ -148,16 +157,11 @@ class Repeater():
         #### Main drone
         repulsive_main_drone = self.get_repulsive_main(pos_main_drone)
 
-
         ### Noise
+        noise = self.get_noise()
+
 
         G_n = 0.5
-
-        if self.percistance_counter % 10 == 0:
-            noise_direction = np.random.normal(0, 1, 2)
-            self.noise_direction = noise_direction / norm(noise_direction)
-
-        self.percistance_counter += 1
 
 
         # Proportional and differential gains
@@ -176,7 +180,7 @@ class Repeater():
         d_error = (error - self.error_prev) / dt
 
         # Control signal
-        u = kp * error + kd * d_error + repulsive + G_n * self.noise_direction
+        u = kp * error + kd * d_error + repulsive + G_n * noise
 
         self.error_prev = error
 
