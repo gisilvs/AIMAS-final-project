@@ -50,7 +50,7 @@ class Repeater():
         # Update position
         self.position += self.velocity
 
-    def get_repulsive(self, centers, S = 10, R = 5):
+    def get_repulsive(self, centers, S = 1, R = 0.1):
 
         repulsive = np.array((0.0, 0.0))
 
@@ -75,7 +75,7 @@ class Repeater():
         return repulsive
 
 
-    def get_repulsive_repeaters(self, repeaters, S = 10, R = 2):
+    def get_repulsive_repeaters(self, repeaters, S = 1, R = 0.1):
 
         repulsive = np.array((0.0, 0.0))
 
@@ -101,7 +101,7 @@ class Repeater():
 
         return repulsive
 
-    def get_repulsive_main(self, pos_main_drone, S = 10, R = 2):
+    def get_repulsive_main(self, pos_main_drone, S = 1, R = 0.1):
 
         repulsive = np.array((0.0, 0.0))
 
@@ -147,7 +147,7 @@ class Repeater():
 
 
         ### Noise
-        G_n = 10
+        G_n = 0.1
 
         if self.percistance_counter % 10 == 0:
             noise_direction = np.random.normal(0, 1, 2)
@@ -157,10 +157,10 @@ class Repeater():
 
 
         # Proportional and differential gains
-        kp = 10; kd = 10
+        kp = 5; kd = 5
 
         # repulsive repeater gain, repulsive shaded gain
-        G_r = 50; G_s = 50
+        G_r = 2; G_s = 1.5
 
         # Accumulated repulsive force from obstacles, other drones and unseen area.
         repulsive = - G_r * repulsive_repeaters - G_s * repulsive_shaded - G_s * repulsive_obstacles - G_r * repulsive_main_drone
@@ -408,6 +408,7 @@ traj_x=traj["x"]
 traj_y=traj["y"]
 traj_pos=np.array(list(zip(traj_x,traj_y)))
 traj_pos-=traj_pos[0]+np.array((-1,-1))
+ground_station=traj_pos[0]
 
 dt=0.1
 
