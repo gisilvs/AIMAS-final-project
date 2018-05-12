@@ -13,12 +13,44 @@ class Repeater():
 
     def __init__(self, pos,index):
         self.position = pos
-        self.velocity = np.array((0, 0), dtype=float)
+        self.velocity = np.zeros(2)
 
-        self.error_prev = np.array((0, 0))
+        self.error_prev = np.zeros(2)
         self.index=index
 
-    def control(self, pos_desired, repeaters = [], boundary_centers = []):
+        # For noise in the control
+        self.percistance_counter = 0
+        self.noise_direction = np.zeros(2)
+
+    def move(self, pos_desired, pos_main_drone, repeaters = [], boundary_centers = []):
+
+        """
+        Updates the position and velocity of the repeater.
+        :param pos_desired: Desired position to go towards
+        :param repeaters: A list with all the repeater drones. To avoid collision
+        :param boundary_centers: A list with the center coordinates of the boundary
+        between seen and unseen area
+        :return:
+        """
+
+        # Get the control signal (acceleration)
+        u = self.control(pos_desired, pos_main_drone, repeaters, boundary_centers)
+
+        # Make sure it's not too large
+        if norm(u) > a_max:
+            u = u / norm(u) * a_max
+
+        # Update velocity
+        self.velocity += u * dt
+
+        # Make sure it's not too large
+        if norm(self.velocity) > v_max:
+            self.velocity = self.velocity / norm(self.velocity) * v_max
+
+        # Update position
+        self.position += self.velocity
+
+    def control(self, pos_desired, pos_main_drone, repeaters = [], boundary_centers = []):
 
         """
         PD controller to provide a control signal / acceleration
@@ -79,6 +111,31 @@ class Repeater():
             else:
                 repulsive_shaded += ((S_s - d) / (S_s - R_s)) * direction
 
+        # Compute repulsive force from the main drone
+        repulsive_main_drone = np.array((0.0, 0.0))
+        d = norm(pos_main_drone - self.position)
+
+        # Direction from main drone to self, normalized
+        direction = (pos_main_drone - self.position) / d
+
+        # If very close, large repulsive force
+        if d <= R_r:
+            repulsive_main_drone += direction * 1000
+
+        else:
+            repulsive_main_drone += ((S_r - d) / (S_r - R_r)) * direction
+
+
+        G_n = 10
+
+        if self.percistance_counter % 10 == 0:
+            noise_direction = np.random.normal(0, 1, 2)
+            self.noise_direction = noise_direction / norm(noise_direction)
+
+        self.percistance_counter += 1
+
+
+
 
         # Proportional and differential gains
         kp = 10; kd = 10
@@ -86,47 +143,24 @@ class Repeater():
         # repulsive repeater gain, repulsive shaded gain
         G_r = 50; G_s = 50
 
+        # Accumulated repulsive force from obstacles, other drones and unseen area.
+        repulsive = - G_r * repulsive_repeaters - G_s * repulsive_shaded - G_r * repulsive_main_drone
+
         # PD controller
         error = pos_desired - self.position
         d_error = (error - self.error_prev) / dt
-        u = kp * error + kd * d_error - G_r * repulsive_repeaters - G_s * repulsive_shaded
+
+        # Control signal
+        u = kp * error + kd * d_error + repulsive + G_n * self.noise_direction
 
         self.error_prev = error
 
         return u
 
-    def move(self, pos_desired, repeaters = [], boundary_centers = []):
-
-        """
-        Updates the position and velocity of the repeater.
-        :param pos_desired: Desired position to go towards
-        :param repeaters: A list with all the repeater drones. To avoid collision
-        :param boundary_centers: A list with the center coordinates of the boundary
-        between seen and unseen area
-        :return:
-        """
-
-        # Get the control signal (acceleration)
-        u = self.control(pos_desired, repeaters, boundary_centers)
-
-        # Make sure it's not too large
-        if norm(u) > a_max:
-            u = u / norm(u) * a_max
-
-        # Update velocity
-        self.velocity += u * dt
-
-        # Make sure it's not too large
-        if norm(self.velocity) > v_max:
-            self.velocity = self.velocity / norm(self.velocity) * v_max
-
-        # Update position
-        self.position += self.velocity
 
 
 
-
-def update_map(position, squares):
+def update_map(position, squares, sh_bounding_polygon, obstacle_matrix):
 
     """
     Updates the discretized map when it is explored
@@ -139,13 +173,21 @@ def update_map(position, squares):
         for j in range (squares.shape[1]):
             square=squares[i,j]
             if square:
-                if norm(position-square['center'])<scanning_range:
-                    seen=True
+                center = square['center']
+                if norm(position-center) < scanning_range:
+                    seen = True
+
+                    # Check if it intersects with obstacle / boundary
+                    line = geometry.LineString([geometry.Point(center), geometry.Point(position)])
+                    if line.intersects(sh_bounding_polygon):
+                        obstacle_matrix[i, j] = 1
+
                 else:
                     seen=False
                 if seen:
                     squares[square['i'],square['j']]=None
-    return squares
+
+    return squares, obstacle_matrix
 
 def find_boundary(squares):
 
@@ -203,13 +245,18 @@ def discretize(bounds, n_squares):
         y+=x_side
         ys.append(y)
 
+
+    xs = [xs[0] - x_side] + xs
+    xs = xs + [xs[-1] + x_side]
+    ys = [ys[0] - x_side] + ys
+    ys = ys + [ys[-1] + x_side]
+
     squares=np.empty((len(xs)-1,len(ys)-1),dtype=object)
     for i in range(len(xs)-1):
         for j in range(len(ys)-1):
-            square=geometry.Polygon([(xs[i],ys[j]),(xs[i],ys[j+1]),(xs[i+1],ys[j+1]),(xs[i+1],ys[j])])
-            #squares.append({'square':square,'center':np.array(square.centroid)})
-            squares[i,j]={'square':square,'center':np.array(square.centroid),'i':i,'j':j}
-            a=0
+            vertices = [(xs[i],ys[j]),(xs[i],ys[j+1]),(xs[i+1],ys[j+1]),(xs[i+1],ys[j])]
+            square=geometry.Polygon(vertices)
+            squares[i,j]={'square':vertices, 'center':np.array(square.centroid), 'i':i,'j':j}
     return squares
 
 def list_to_pygame(list_of_points):
@@ -264,7 +311,7 @@ def set_bg(repeaters,squares):
         for j in range(squares.shape[1]):
             square = squares[i, j]
             if square:
-                pg.draw.polygon(s,(100,100,100,128),list_to_pygame(list(np.array(square['square'].exterior.coords)[:-1])))
+                pg.draw.polygon(s,(100,100,100,128), list_to_pygame(square['square']))
 
     screen.blit(s, (0, 0))
 # PyGame parameters
@@ -306,6 +353,7 @@ sh_bounding_polygon=geometry.Polygon(bounding_polygon)
 bounds = sh_bounding_polygon.bounds
 n_squares = 30
 squares=discretize(bounds, n_squares)
+obstacle_matrix = np.zeros(squares.shape)
 
 repeaters=[]
 
@@ -325,7 +373,7 @@ while not done:
         start = True
 
     ## check if we see some square
-    squares=update_map(traj_pos[time_step],squares)  
+    squares, obstacle_matrix = update_map(traj_pos[time_step],squares, sh_bounding_polygon, obstacle_matrix)
     ## Now we look for the boundary of the unseen area, to find points to use for the force field
     boundary=find_boundary(squares)
     boundary_centers = []
@@ -333,6 +381,8 @@ while not done:
         boundary_centers.append(squares[boundary_index]['center'])
 
 
+
+    pos_main_drone = traj_pos[time_step]
 
     if repeaters:
         # if we have repeaters we move them
@@ -343,9 +393,10 @@ while not done:
             #for all the repeaters, if is the one following the payload we move towards it,
             # otherwise we move towards the next repeater in the chain
             if r==0:
-                repeaters[r].move(traj_pos[time_step], repeaters, boundary_centers)#todo: go to the boss
+                pos_desired = traj_pos[time_step] # todo: here do the optimization?
+                repeaters[r].move(pos_desired, pos_main_drone, repeaters, boundary_centers)#todo: go to the boss
             else:
-                repeaters[r].move(repeaters[r-1].position, repeaters, boundary_centers)#todo: go to the previous repeater
+                repeaters[r].move(repeaters[r-1].position, pos_main_drone, repeaters, boundary_centers)#todo: go to the previous repeater
 
 
     else:
