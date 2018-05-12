@@ -50,7 +50,7 @@ class Repeater():
         # Update position
         self.position += self.velocity
 
-    def get_repulsive(self, centers, S = 10, R = 5):
+    def get_repulsive(self, centers, S = 10, R = 3):
 
         repulsive = np.array((0.0, 0.0))
 
@@ -75,7 +75,7 @@ class Repeater():
         return repulsive
 
 
-    def get_repulsive_repeaters(self, repeaters, S = 10, R = 2):
+    def get_repulsive_repeaters(self, repeaters, S = 10, R = 3):
 
         repulsive = np.array((0.0, 0.0))
 
@@ -101,7 +101,7 @@ class Repeater():
 
         return repulsive
 
-    def get_repulsive_main(self, pos_main_drone, S = 10, R = 2):
+    def get_repulsive_main(self, pos_main_drone, S = 10, R = 3):
 
         repulsive = np.array((0.0, 0.0))
 
@@ -147,7 +147,7 @@ class Repeater():
 
 
         ### Noise
-        G_n = 10
+        G_n = 0.5
 
         if self.percistance_counter % 10 == 0:
             noise_direction = np.random.normal(0, 1, 2)
@@ -160,7 +160,7 @@ class Repeater():
         kp = 10; kd = 10
 
         # repulsive repeater gain, repulsive shaded gain
-        G_r = 50; G_s = 50
+        G_r = 1; G_s = 1
 
         # Accumulated repulsive force from obstacles, other drones and unseen area.
         repulsive = - G_r * repulsive_repeaters - G_s * repulsive_shaded - G_s * repulsive_obstacles - G_r * repulsive_main_drone
