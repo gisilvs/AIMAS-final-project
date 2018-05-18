@@ -419,8 +419,8 @@ traj_t=traj["t"]
 traj_theta=traj["theta"]
 traj_x=traj["x"]
 traj_y=traj["y"]
-traj_pos=np.array(list(zip(traj_x,traj_y)))
-traj_pos-=traj_pos[0]+np.array((-1,-1))
+traj_pos = np.array(list(zip(traj_x,traj_y))) * 1.4
+traj_pos -= traj_pos[0]+np.array((-1,-1))
 ground_station=traj_pos[0]
 
 dt=0.1
