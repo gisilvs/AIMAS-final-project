@@ -346,8 +346,8 @@ def to_pygame(coords):
     Convert coordinates into pygame coordinates
     """
 
-    return (int(coords[0] * 5 + width / 2 - 150), int(coords[1] * -5 + height / 2 + 200))
-
+    #return (int(coords[0] * 5 + width / 2 - 150), int(coords[1] * -5 + height / 2 + 200))
+    return (int(coords[1] * -7 + height / 2 + 600),int(coords[0] * 7 + width / 2 - 550))
 
 def set_bg(repeaters,squares,obstacle_matrix):
 
@@ -373,10 +373,10 @@ def set_bg(repeaters,squares,obstacle_matrix):
     pg.draw.line(screen,(255,0,0),to_pygame(traj_pos[time_step]+np.array([1,1])),to_pygame(traj_pos[time_step]+np.array([-1,-1])),4)
     pg.draw.line(screen, (255, 0, 0), to_pygame(traj_pos[time_step] + np.array([-1, 1])),
                  to_pygame(traj_pos[time_step] + np.array([1, -1])),4)
-    pg.draw.circle(screen,(255,0,0),to_pygame(traj_pos[time_step]),scanning_range*5,1)
+    pg.draw.circle(screen,(255,0,0),to_pygame(traj_pos[time_step]),scanning_range*7,1)
     pg.draw.circle(screen,(0,153,0),to_pygame(ground_station),5)
-    pg.draw.circle(screen,(0,153,0),to_pygame(ground_station),sensor_range*5,1)
-    pg.draw.circle(screen, (0, 255, 0), to_pygame(ground_station), desired_range * 5, 1)
+    pg.draw.circle(screen,(0,153,0),to_pygame(ground_station),sensor_range*7,1)
+    pg.draw.circle(screen, (0, 255, 0), to_pygame(ground_station), desired_range * 7, 1)
     if repeaters:
         for repeater in repeaters:
             pg.draw.line(screen, (0, 0, 255), to_pygame(repeater.position + np.array([0.8, 0.8])),
@@ -421,7 +421,7 @@ traj_t=traj["t"]
 traj_theta=traj["theta"]
 traj_x=traj["x"]
 traj_y=traj["y"]
-traj_pos = np.array(list(zip(traj_x,traj_y))) * 1.3
+traj_pos = np.array(list(zip(traj_x,traj_y))) * 1.4
 traj_pos -= traj_pos[0]+np.array((-1,-1))
 ground_station=traj_pos[0]
 
@@ -448,7 +448,7 @@ sh_bounding_lines=geometry.LineString(bounding_lines)
 
 
 bounds = sh_bounding_polygon.bounds
-n_squares = 25
+n_squares = 50
 squares=discretize(bounds, n_squares)
 obstacle_matrix = np.zeros(squares.shape)
 
@@ -505,6 +505,6 @@ while not done:
 
     time_step += 1
 
-    if time_step%5==0:
+    if time_step%2==0:
         set_bg(repeaters,squares,obstacle_matrix)
         pg.display.flip()
