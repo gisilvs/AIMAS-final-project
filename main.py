@@ -349,7 +349,7 @@ def to_pygame(coords):
     #return (int(coords[0] * 5 + width / 2 - 150), int(coords[1] * -5 + height / 2 + 200))
     return (int(coords[1] * -7 + height / 2 + 600),int(coords[0] * 7 + width / 2 - 550))
 
-def set_bg(repeaters,squares,obstacle_matrix):
+def set_bg(repeaters,squares):
 
     """
     set initial and final position
@@ -389,8 +389,6 @@ def set_bg(repeaters,squares,obstacle_matrix):
             square = squares[i, j]
             if not square['seen']:
                 pg.draw.polygon(s,(100,100,100,128), list_to_pygame(square['vertices']))
-            if obstacle_matrix[i,j]==1:
-                pg.draw.polygon(s, (222, 184, 135,128), list_to_pygame(square['vertices']))
 
     for i in range(1,len(bounding_lines)):
         pg.draw.line(screen,(0,0,0),to_pygame(bounding_lines[i-1]),to_pygame(bounding_lines[i]))
@@ -505,6 +503,6 @@ while not done:
 
     time_step += 1
 
-    if time_step%2==0:
-        set_bg(repeaters,squares,obstacle_matrix)
+    if time_step%1==0:
+        set_bg(repeaters,squares)
         pg.display.flip()
