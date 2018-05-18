@@ -421,8 +421,8 @@ traj_t=traj["t"]
 traj_theta=traj["theta"]
 traj_x=traj["x"]
 traj_y=traj["y"]
-traj_pos=np.array(list(zip(traj_x,traj_y)))
-traj_pos-=traj_pos[0]+np.array((-1,-1))
+traj_pos = np.array(list(zip(traj_x,traj_y))) * 1.3
+traj_pos -= traj_pos[0]+np.array((-1,-1))
 ground_station=traj_pos[0]
 
 dt=0.1
@@ -448,7 +448,7 @@ sh_bounding_lines=geometry.LineString(bounding_lines)
 
 
 bounds = sh_bounding_polygon.bounds
-n_squares = 40
+n_squares = 25
 squares=discretize(bounds, n_squares)
 obstacle_matrix = np.zeros(squares.shape)
 
