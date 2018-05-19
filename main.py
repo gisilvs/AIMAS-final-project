@@ -4,6 +4,7 @@ import numpy as np
 from numpy.linalg import norm
 import time
 from shapely import geometry
+import conf
 import matplotlib.pyplot as plt
 
 class Repeater():
@@ -147,8 +148,11 @@ class Repeater():
 
         # todo: choose good parameters for the gains
         # Proportional and differential gains
-        kp = 20
-        kd = 5
+        #kp = 5
+        #kd = 20
+        kp = conf.kp
+        kd = conf.kd
+
 
         # repulsive repeater gain, repulsive shaded gain, noise gain
         G_r = 1
@@ -438,9 +442,10 @@ def sample_feasible_point(target_pos,repeater_pos,desired_range,sensor_range,rep
     min_x, min_y, max_x, max_y = desired_intersection.bounds
 
 
+    n_samples = conf.n_samples
     # Store sampled points in allowed region
     samples = []
-    while len(samples) < 100:
+    while len(samples) < n_samples:
 
         s = np.random.uniform((min_x, min_y), (max_x, max_y))
         if geometry.Point(s).within(desired_intersection):
@@ -486,7 +491,7 @@ def sample_feasible_point(target_pos,repeater_pos,desired_range,sensor_range,rep
         sample_dmin.append(dist_to_closest)
 
 
-    wm = 1; wl = 1
+    wm = conf.wm; wl = conf.wl
     objective = np.array([wm*dmin + wl*np.sqrt(dline) for dmin, dline in zip(sample_dmin, sample_dline)])
 
     best_index = np.argmax(objective)
@@ -510,9 +515,14 @@ data = json.load(open('P25_X.json'))
 traj=json.load(open('P25_26_traj.json'))
 bounding_polygon = data["bounding_polygon"]
 ground_station=np.array(data["ground_station"],dtype=float)
-sensor_range=data["sensor_range"]
-desired_range=data["desired_range"]
-scanning_range=data["scanning_range"]
+
+#sensor_range=data["sensor_range"]
+#desired_range=data["desired_range"]
+#canning_range=data["scanning_range"]
+
+sensor_range = conf.sensor_range
+desired_range = conf.desired_range
+scanning_range = conf.scanning_range
 
 a_max = data["vehicle_a_max"]
 v_max = data["vehicle_v_max"]
@@ -549,7 +559,8 @@ sh_bounding_lines=geometry.LineString(bounding_lines)
 
 
 bounds = sh_bounding_polygon.bounds
-n_squares = 40
+n_squares = conf.n_squares
+plot_step = conf.plot_step
 squares=discretize(bounds, n_squares)
 obstacle_matrix = np.zeros(squares.shape)
 
@@ -611,6 +622,6 @@ while not done:
 
     time_step += 1
 
-    if time_step%5==0:
+    if time_step%plot_step==0:
         set_bg(repeaters,squares)
         pg.display.flip()
