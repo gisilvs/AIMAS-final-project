@@ -4,7 +4,7 @@ kd = 20
 
 # LOS parameters
 wm = 3
-wl = 1
+wl = 0.5
 n_samples = 20
 
 # plotting
