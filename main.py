@@ -147,8 +147,8 @@ class Repeater():
 
         # todo: choose good parameters for the gains
         # Proportional and differential gains
-        kp = 10
-        kd = 10
+        kp = 20
+        kd = 5
 
         # repulsive repeater gain, repulsive shaded gain, noise gain
         G_r = 1
@@ -290,10 +290,12 @@ def find_boundary(squares):
                     boundary.add((squares[x,y]['i'],squares[x,y]['j']))
 
     boundary_centers = []
+    boundaries=[]
     for boundary_index in boundary:
         boundary_centers.append(squares[boundary_index]['center'])
+        boundaries.append(squares[boundary_index])
 
-    return boundary_centers,boundary
+    return boundary_centers,boundaries
 
 def discretize(bounds, n_squares):
 
@@ -394,6 +396,8 @@ def set_bg(repeaters,squares):
     pg.draw.line(screen,(255,0,0),to_pygame(traj_pos[time_step]+np.array([1,1])),to_pygame(traj_pos[time_step]+np.array([-1,-1])),4)
     pg.draw.line(screen, (255, 0, 0), to_pygame(traj_pos[time_step] + np.array([-1, 1])),
                  to_pygame(traj_pos[time_step] + np.array([1, -1])),4)
+    pg.draw.circle(screen, (200, 0, 0), to_pygame(traj_pos[time_step]), 2*sensor_range*7, 1)
+    pg.draw.circle(screen, (255, 0, 0), to_pygame(traj_pos[time_step]), (sensor_range+desired_range)*7, 1)
     pg.draw.circle(screen,(255,0,0),to_pygame(traj_pos[time_step]),scanning_range*7,1)
     pg.draw.circle(screen,(0,153,0),to_pygame(ground_station),5)
     pg.draw.circle(screen,(0,153,0),to_pygame(ground_station),sensor_range*7,1)
@@ -404,6 +408,7 @@ def set_bg(repeaters,squares):
                      to_pygame(repeater.position+ np.array([-0.8, -0.8])), 3)
             pg.draw.line(screen, (0, 0, 255), to_pygame(repeater.position + np.array([-0.8, 0.8])),
                      to_pygame(repeater.position + np.array([0.8, -0.8])), 3)
+            pg.draw.circle(screen, (0, 0, 255), to_pygame(repeater.position), 2*v_max * 7, 1)
     s=pg.Surface((infoObject.current_w, infoObject.current_h),pg.SRCALPHA)
     for i in range(squares.shape[0]):
         for j in range(squares.shape[1]):
@@ -424,9 +429,10 @@ background_colour = (255, 255, 255)
 screen.fill(background_colour)
 
 
-def sample_feasible_point(target_pos,repeater_pos,desired_range,repeater_v_max, boundary_obstacles):
-    sh_target=geometry.Point(target_pos).buffer(desired_range)
-    sh_repeater=geometry.Point(repeater_pos).buffer(3*repeater_v_max)
+def sample_feasible_point(target_pos,repeater_pos,desired_range,sensor_range,repeater_v_max, boundary_obstacles):
+    #sh_target=geometry.Point(target_pos).buffer(2*sensor_range).difference(geometry.Point(target_pos).buffer(desired_range+sensor_range))
+    sh_target =geometry.Point(target_pos).buffer(desired_range + sensor_range)
+    sh_repeater=geometry.Point(repeater_pos).buffer(2*repeater_v_max)
     desired_intersection = sh_target.intersection(sh_repeater)
 
 
@@ -434,14 +440,25 @@ def sample_feasible_point(target_pos,repeater_pos,desired_range,repeater_v_max, 
 
     samples = []
     while len(samples) < 100:
+
         s = np.random.uniform((min_x, min_y), (max_x, max_y))
         if geometry.Point(s).within(desired_intersection):
             #for obst in boundary_obstacles:
             samples.append(s)
 
-    samples = np.array(samples)
+    good_samples=[]
+    for sample in samples:
+        is_good = True
+        for square in boundary_obstacles:
+            if geometry.LineString([target_pos, sample]).intersects(square['square']):
+                is_good = False
+                break
+        if is_good:
+            good_samples.append(sample)
 
-    index = np.argmin(norm(samples - target_pos, axis = 1))
+    samples = np.array(good_samples)
+
+    index = np.argmax(norm(samples - target_pos, axis = 1))
     sample = samples[index]
 
     # testplot
@@ -452,7 +469,7 @@ def sample_feasible_point(target_pos,repeater_pos,desired_range,repeater_v_max, 
     return sample
 
 
-sample_feasible_point([20,20],[0,0],25,2,None)
+#sample_feasible_point([20,20],[0,0],25,2,None)
 
 
 data = json.load(open('P25_X.json'))
@@ -498,7 +515,7 @@ sh_bounding_lines=geometry.LineString(bounding_lines)
 
 
 bounds = sh_bounding_polygon.bounds
-n_squares = 50
+n_squares = 40
 squares=discretize(bounds, n_squares)
 obstacle_matrix = np.zeros(squares.shape)
 
@@ -534,12 +551,15 @@ while not done:
         # if we have repeaters we move them
         if norm(repeaters[-1].position-ground_station)>=desired_range:
             #if the last added repeater is going out of rage from the ground station we add a new one
-            repeaters.append(Repeater(ground_station.copy(),len(repeaters)))
+            a=0
+            #repeaters.append(Repeater(ground_station.copy(),len(repeaters)))
         for r in range(len(repeaters)):
             #for all the repeaters, if is the one following the payload we move towards it,
             # otherwise we move towards the next repeater in the chain
             if r==0:
-                pos_desired = traj_pos[time_step] # todo: here do the optimization?
+                target_pos=traj_pos[time_step]
+                repeater_pos=repeaters[r].position
+                pos_desired = sample_feasible_point(target_pos,repeater_pos,desired_range,sensor_range,v_max,boundary) # todo: here do the optimization?
                 repeaters[r].move(pos_desired, pos_main_drone, repeaters, boundary_centers, obstacle_centers)#todo: go to the boss
             else:
                 repeaters[r].move(repeaters[r-1].position, pos_main_drone,
@@ -549,7 +569,7 @@ while not done:
     else:
     #if there are no repeaters, we check if the payload is on range.
     # if not, we add a repeater
-        if norm(traj_pos[time_step]-ground_station)>=desired_range:
+        if norm(traj_pos[time_step]-ground_station)>=desired_range*2:
             repeaters.append(Repeater(ground_station.copy(),0))
 
 
