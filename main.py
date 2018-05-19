@@ -435,10 +435,10 @@ def sample_feasible_point(target_pos,repeater_pos,desired_range,sensor_range,rep
     sh_repeater=geometry.Point(repeater_pos).buffer(2*repeater_v_max)
     desired_intersection = sh_target.intersection(sh_repeater)
 
-
-    dist = norm(target_pos - repeater_pos)
     min_x, min_y, max_x, max_y = desired_intersection.bounds
 
+
+    # Store sampled points in allowed region
     samples = []
     while len(samples) < 100:
 
@@ -447,29 +447,60 @@ def sample_feasible_point(target_pos,repeater_pos,desired_range,sensor_range,rep
             #for obst in boundary_obstacles:
             samples.append(s)
 
-    good_samples=[]
+
+    # Store the squares that are within range to even block the LOS
+    dist = norm(target_pos - repeater_pos)
+    squares_of_interest = []
+    for square in boundary_obstacles:
+        if norm(square['center'] - target_pos) < 2 * sensor_range:
+            if norm(square['center'] - repeater_pos) < dist + 2*repeater_v_max:
+                squares_of_interest.append(square)
+
+
+    # Store sampled points in the allowed region to find ones that are in LOS
+    good_samples = []
     for sample in samples:
         is_good = True
-        for square in boundary_obstacles:
-            if norm(square['center'] - sample) < dist: # todo: does this make sense?
-                if norm(square['center'] - target_pos) < 2*sensor_range:
-                    if geometry.LineString([target_pos, sample]).intersects(square['square']):
-                        is_good = False
-                        break
+        for square in squares_of_interest:
+            if geometry.LineString([target_pos, sample]).intersects(square['square']):
+                is_good = False
+                break
         if is_good:
             good_samples.append(sample)
 
     samples = np.array(good_samples)
 
-    index = np.argmax(norm(samples - target_pos, axis = 1))
-    sample = samples[index]
+
+    # for each sample in LOS
+    sample_dline = []
+    sample_dmin = []
+    for sample in samples:
+        # store distance from sample to target
+        sample_dline.append(norm(sample - target_pos))
+        dist_to_closest = np.inf
+        line = geometry.LineString([target_pos, sample])
+        for square in squares_of_interest:
+            dist_to_line = geometry.Point(square['center']).distance(line)
+            if dist_to_line < dist_to_closest:
+                dist_to_closest = dist_to_line
+        sample_dmin.append(dist_to_closest)
+
+
+    wm = 1; wl = 1
+    objective = np.array([wm*dmin + wl*np.sqrt(dline) for dmin, dline in zip(sample_dmin, sample_dline)])
+
+    best_index = np.argmax(objective)
+    best_point = samples[best_index]
+
+    #index = np.argmax(norm(samples - target_pos, axis = 1))
+    #sample = samples[index]
 
     # testplot
     #plt.scatter(samples[:,0], samples[:,1])
     #plt.scatter(sample[0], sample[1], c='r')
     #plt.show()
 
-    return sample
+    return best_point
 
 
 #sample_feasible_point([20,20],[0,0],25,2,None)
