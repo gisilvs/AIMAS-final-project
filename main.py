@@ -69,7 +69,7 @@ class Repeater():
 
             # If very close, large repulsive force
             if d <= R:
-                repulsive += direction * 1000
+                repulsive += direction * 100
 
             else:
                 repulsive += ((S - d) / (S - R)) * direction
@@ -97,7 +97,7 @@ class Repeater():
 
                 # If very close, large repulsive force
                 if d <= R:
-                    repulsive += direction * 1000
+                    repulsive += direction * 100
 
                 else:
                     repulsive += ((S - d) / (S - R)) * direction
@@ -116,7 +116,7 @@ class Repeater():
 
         # If very close, large repulsive force
         if d <= R:
-            repulsive += direction * 1000
+            repulsive += direction * 100
 
         else:
             repulsive += ((S - d) / (S - R)) * direction
@@ -147,7 +147,7 @@ class Repeater():
 
         # todo: choose good parameters for the gains
         # Proportional and differential gains
-        kp = 20
+        kp = 200
         kd = 5
 
         # repulsive repeater gain, repulsive shaded gain, noise gain
@@ -408,7 +408,7 @@ def set_bg(repeaters,squares):
                      to_pygame(repeater.position+ np.array([-0.8, -0.8])), 3)
             pg.draw.line(screen, (0, 0, 255), to_pygame(repeater.position + np.array([-0.8, 0.8])),
                      to_pygame(repeater.position + np.array([0.8, -0.8])), 3)
-            pg.draw.circle(screen, (0, 0, 255), to_pygame(repeater.position), 2*v_max * 7, 1)
+            pg.draw.circle(screen, (0, 0, 255), to_pygame(repeater.position), int(3*v_max * 7), 1)
     s=pg.Surface((infoObject.current_w, infoObject.current_h),pg.SRCALPHA)
     for i in range(squares.shape[0]):
         for j in range(squares.shape[1]):
@@ -440,7 +440,7 @@ def sample_feasible_point(target_pos,repeater_pos,desired_range,sensor_range,rep
 
     # Store sampled points in allowed region
     samples = []
-    while len(samples) < 100:
+    while len(samples) < 20:
 
         s = np.random.uniform((min_x, min_y), (max_x, max_y))
         if geometry.Point(s).within(desired_intersection):
@@ -453,7 +453,7 @@ def sample_feasible_point(target_pos,repeater_pos,desired_range,sensor_range,rep
     squares_of_interest = []
     for square in boundary_obstacles:
         if norm(square['center'] - target_pos) < 2 * sensor_range:
-            if norm(square['center'] - repeater_pos) < dist + 2*repeater_v_max:
+            if norm(square['center'] - repeater_pos) < dist + 3*repeater_v_max:
                 squares_of_interest.append(square)
 
 
@@ -474,6 +474,8 @@ def sample_feasible_point(target_pos,repeater_pos,desired_range,sensor_range,rep
     # for each sample in LOS
     sample_dline = []
     sample_dmin = []
+    if not good_samples:
+        print('LOST LOS!!! WTF')
     for sample in samples:
         # store distance from sample to target
         sample_dline.append(norm(sample - target_pos))
@@ -486,7 +488,7 @@ def sample_feasible_point(target_pos,repeater_pos,desired_range,sensor_range,rep
         sample_dmin.append(dist_to_closest)
 
 
-    wm = 1; wl = 1
+    wm = 2; wl = 1
     objective = np.array([wm*dmin + wl*np.sqrt(dline) for dmin, dline in zip(sample_dmin, sample_dline)])
 
     best_index = np.argmax(objective)
@@ -611,6 +613,6 @@ while not done:
 
     time_step += 1
 
-    if time_step%1==0:
+    if time_step%5==0:
         set_bg(repeaters,squares)
         pg.display.flip()
