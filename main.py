@@ -436,6 +436,7 @@ def sample_feasible_point(target_pos,repeater_pos,desired_range,sensor_range,rep
     desired_intersection = sh_target.intersection(sh_repeater)
 
 
+    dist = norm(target_pos - repeater_pos)
     min_x, min_y, max_x, max_y = desired_intersection.bounds
 
     samples = []
@@ -450,9 +451,11 @@ def sample_feasible_point(target_pos,repeater_pos,desired_range,sensor_range,rep
     for sample in samples:
         is_good = True
         for square in boundary_obstacles:
-            if geometry.LineString([target_pos, sample]).intersects(square['square']):
-                is_good = False
-                break
+            if norm(square['center'] - sample) < dist: # todo: does this make sense?
+                if norm(square['center'] - target_pos) < 2*sensor_range:
+                    if geometry.LineString([target_pos, sample]).intersects(square['square']):
+                        is_good = False
+                        break
         if is_good:
             good_samples.append(sample)
 
