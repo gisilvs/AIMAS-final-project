@@ -4,6 +4,7 @@ import numpy as np
 from numpy.linalg import norm
 import time
 from shapely import geometry
+import matplotlib.pyplot as plt
 
 class Repeater():
 
@@ -423,15 +424,32 @@ background_colour = (255, 255, 255)
 screen.fill(background_colour)
 
 
-def sample_feasible_point(target_pos,repeater_pos,desired_range,repeater_v_max,boundary_obstacles):
+def sample_feasible_point(target_pos,repeater_pos,desired_range,repeater_v_max, boundary_obstacles):
     sh_target=geometry.Point(target_pos).buffer(desired_range)
     sh_repeater=geometry.Point(repeater_pos).buffer(3*repeater_v_max)
-    desired_intersection=sh_target.boundary.intersection(sh_repeater)
-    sampled_points=[]
-    for i in range(10):
-        point=desired_intersection.representative_point()
-        sampled_points.append(np.array(point))
-    a=0
+    desired_intersection = sh_target.intersection(sh_repeater)
+
+
+    min_x, min_y, max_x, max_y = desired_intersection.bounds
+
+    samples = []
+    while len(samples) < 100:
+        s = np.random.uniform((min_x, min_y), (max_x, max_y))
+        if geometry.Point(s).within(desired_intersection):
+            #for obst in boundary_obstacles:
+            samples.append(s)
+
+    samples = np.array(samples)
+
+    index = np.argmin(norm(samples - target_pos, axis = 1))
+    sample = samples[index]
+
+    # testplot
+    #plt.scatter(samples[:,0], samples[:,1])
+    #plt.scatter(sample[0], sample[1], c='r')
+    #plt.show()
+
+    return sample
 
 
 sample_feasible_point([20,20],[0,0],25,2,None)
