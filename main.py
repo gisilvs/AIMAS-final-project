@@ -580,6 +580,6 @@ while not done:
 
     time_step += 1
 
-    if time_step%5==0:
+    if time_step%1==0:
         set_bg(repeaters,squares)
         pg.display.flip()
