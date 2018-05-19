@@ -48,7 +48,7 @@ class Repeater():
             self.velocity = self.velocity / norm(self.velocity) * v_max
 
         # Update position
-        self.position += self.velocity
+        self.position += self.velocity*dt
 
 
     def get_repulsive(self, centers, S = 10, R = 3):
@@ -132,6 +132,7 @@ class Repeater():
 
         return self.noise_direction
 
+
     def control(self, pos_desired, pos_main_drone, repeaters, boundary_centers, obstacle_centers):
 
         """
@@ -184,7 +185,18 @@ class Repeater():
         return u
 
 
-def update_map(position, squares, sh_bounding_lines, obstacle_matrix,sh_obstacles):
+def find_connected_components(boundaries):
+    boundary=list(boundaries)
+    connected_components=[]
+    while boundary:
+        component=0
+        for point in range(1):
+            a=0
+    a=0
+
+
+
+def update_map(position, squares, sh_bounding_lines,sh_obstacles):
 
     """
     Updates the discretized map when it is explored
@@ -201,26 +213,34 @@ def update_map(position, squares, sh_bounding_lines, obstacle_matrix,sh_obstacle
                 if norm(position-center) < scanning_range:
                     seen = True
                     line = geometry.LineString([center, position])
-                    for obstacle in sh_obstacles:
-                        if line.intersects(obstacle.boundary):
-                            seen=False
-                            break
+                    if line.intersects(sh_bounding_lines):
+                        seen=False
 
                     if seen:
+
+                        for obstacle in sh_obstacles:
+                            if line.intersects(obstacle.boundary):
+                                seen=False
+                                break
+                            if square['square'].intersects(obstacle.boundary):  # or square['square'].touches(obstacle.boundary):
+                                seen=False
+                                break
+
+                    '''if seen:
                         # Check if it intersects with obstacle / boundary
 
                         if line.intersects(sh_bounding_lines):
                             obstacle_matrix[i, j] = 1
                         for obstacle in sh_obstacles:
                             if square['square'].intersects(obstacle.boundary):# or square['square'].touches(obstacle.boundary):
-                                obstacle_matrix[i, j] = 1
+                                obstacle_matrix[i, j] = 1'''
 
                 else:
                     seen=False
                 if seen:
                     squares[square['i'],square['j']]['seen']=True
 
-    return squares, obstacle_matrix
+    return squares
 
 def get_obstacle_centers(squares, obstacle_matrix):
 
@@ -272,7 +292,7 @@ def find_boundary(squares):
     for boundary_index in boundary:
         boundary_centers.append(squares[boundary_index]['center'])
 
-    return boundary_centers
+    return boundary_centers,boundary
 
 def discretize(bounds, n_squares):
 
@@ -362,8 +382,8 @@ def set_bg(repeaters,squares):
         if len(robots.all_locations)>1:
             for p in range(1,len(robots.all_locations)):
                 pg.draw.line(screen,robots.colors[i],to_pygame(robots.all_locations[p-1][i]),to_pygame(robots.all_locations[p][i]))'''
-    for i in range(1,len(traj_pos)):
-        pg.draw.line(screen,(0,0,0),to_pygame(traj_pos[i-1]),to_pygame(traj_pos[i]))
+    #for i in range(1,len(traj_pos)):
+        #pg.draw.line(screen,(0,0,0),to_pygame(traj_pos[i-1]),to_pygame(traj_pos[i]))
 
     [pg.draw.polygon(screen, (0, 0, 0), list_to_pygame(obstacle), 0) for obstacle in obstacles]
     #pg.draw.polygon(screen, (0, 0, 0), pg_bounding_polygon, 1)
@@ -401,6 +421,20 @@ width = infoObject.current_w
 height = infoObject.current_h
 background_colour = (255, 255, 255)
 screen.fill(background_colour)
+
+
+def sample_feasible_point(target_pos,repeater_pos,desired_range,repeater_v_max,boundary_obstacles):
+    sh_target=geometry.Point(target_pos).buffer(desired_range)
+    sh_repeater=geometry.Point(repeater_pos).buffer(3*repeater_v_max)
+    desired_intersection=sh_target.boundary.intersection(sh_repeater)
+    sampled_points=[]
+    for i in range(10):
+        point=desired_intersection.representative_point()
+        sampled_points.append(np.array(point))
+    a=0
+
+
+sample_feasible_point([20,20],[0,0],25,2,None)
 
 
 data = json.load(open('P25_X.json'))
@@ -468,9 +502,11 @@ while not done:
         start = True
 
     ## check if we see some square
-    squares, obstacle_matrix = update_map(traj_pos[time_step],squares, sh_bounding_lines, obstacle_matrix,sh_obstacles)
+    squares= update_map(traj_pos[time_step],squares, sh_bounding_lines,sh_obstacles)
     ## Now we look for the boundary of the unseen area, to find points to use for the force field
-    boundary_centers = find_boundary(squares)
+    boundary_centers,boundary = find_boundary(squares)
+    #find_connected_components(boundary)
+
     obstacle_centers = get_obstacle_centers(squares, obstacle_matrix)
 
 
@@ -503,6 +539,6 @@ while not done:
 
     time_step += 1
 
-    if time_step%1==0:
+    if time_step%5==0:
         set_bg(repeaters,squares)
         pg.display.flip()
