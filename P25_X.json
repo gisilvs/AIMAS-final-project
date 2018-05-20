@@ -78,7 +78,6 @@
   "ground_station": [0,0],
   "sensor_range":15,
   "desired_range":10,
-
   "vehicle_L": 2,
   "vehicle_a_max": 3,
   "vehicle_dt": 0.1,
