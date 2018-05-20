@@ -435,7 +435,7 @@ screen.fill(background_colour)
 
 def sample_feasible_point(target_pos,repeater_pos,desired_range,sensor_range,repeater_v_max, boundary_obstacles):
     #sh_target=geometry.Point(target_pos).buffer(2*sensor_range).difference(geometry.Point(target_pos).buffer(desired_range+sensor_range))
-    sh_target =geometry.Point(target_pos).buffer(desired_range + sensor_range)
+    sh_target = geometry.Point(target_pos).buffer(desired_range + sensor_range)
     sh_repeater=geometry.Point(repeater_pos).buffer(2*repeater_v_max)
     desired_intersection = sh_target.intersection(sh_repeater)
 
@@ -492,10 +492,19 @@ def sample_feasible_point(target_pos,repeater_pos,desired_range,sensor_range,rep
 
 
     wm = conf.wm; wl = conf.wl
-    objective = np.array([wm*dmin + wl*np.sqrt(dline) for dmin, dline in zip(sample_dmin, sample_dline)])
+    obj = lambda dmin, dline: wm * dmin + wl*dline
+    #obj = lambda dmin, dline: wm*dmin + wl*np.sqrt(dline)
 
-    best_index = np.argmax(objective)
-    best_point = samples[best_index]
+    objective = np.array(list(map(obj, sample_dmin, sample_dline)))
+    #objective = np.array([obj(dmin, dline) for dmin, dline in zip(sample_dmin, sample_dline)])
+
+    try:
+        best_index = np.argmax(objective)
+        best_point = samples[best_index]
+    except:
+        # todo: add a stop signal to target/main drone in this case
+        print('cant find feasible point, go towards target!')
+        best_point = target_pos
 
     #index = np.argmax(norm(samples - target_pos, axis = 1))
     #sample = samples[index]
