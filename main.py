@@ -165,12 +165,13 @@ def sample_feasible_point(target_pos,repeater_pos,desired_range,sensor_range,rep
     :param boundary_obstacles: boundary of unseen area and of obstacles. To take into account for line of sight
     :return: the next position the drone should point to
     """
-
-    sh_target = geometry.Point(target_pos).buffer(desired_range + sensor_range)
+    sh_inner=geometry.Point(target_pos).buffer(inner_range+sensor_range)
+    sh_target = geometry.Point(target_pos).buffer(desired_range + sensor_range)#.difference(sh_inner)
     sh_repeater = geometry.Point(repeater_pos).buffer(V_CONST*repeater_v_max)
     desired_intersection = sh_target.intersection(sh_repeater)
 
     min_x, min_y, max_x, max_y = desired_intersection.bounds
+
 
 
     n_samples = conf.n_samples
@@ -192,7 +193,7 @@ def sample_feasible_point(target_pos,repeater_pos,desired_range,sensor_range,rep
         squares_of_interest = []
         for square in boundary_obstacles:
             if norm(square['center'] - target_pos) < 2 * sensor_range:
-                if norm(square['center'] - repeater_pos) < dist + 2*repeater_v_max:
+                if norm(square['center'] - repeater_pos) < dist + V_CONST*repeater_v_max:
                     squares_of_interest.append(square)
 
 
@@ -228,13 +229,13 @@ def sample_feasible_point(target_pos,repeater_pos,desired_range,sensor_range,rep
             dist_to_line = geometry.Point(square['center']).distance(line)
             if dist_to_line < dist_to_closest:
                 dist_to_closest = dist_to_line
-        sample_dmin.append(dist_to_closest)
+            sample_dmin.append(dist_to_closest)
 
 
     wm = conf.wm; wl = conf.wl
 
     if sqrt:
-        obj = lambda dmin, dline: wm*dmin + wl*np.sqrt(dline)
+        obj = lambda dmin, dline: wm*np.sqrt(dmin) + wl*np.sqrt(dline)
     else:
         obj = lambda dmin, dline: wm * dmin + wl*dline
 
@@ -268,6 +269,7 @@ ground_station=np.array(data["ground_station"],dtype=float)
 sensor_range=data["sensor_range"]
 desired_range=data["desired_range"]
 scanning_range=data["scanning_range"]
+inner_range=data["inner_range"]
 a_max = data["vehicle_a_max"]
 v_max = data["vehicle_v_max"]
 
@@ -319,11 +321,18 @@ while not done:
     squares= update_map(traj_pos[time_step],squares, sh_bounding_lines,sh_obstacles)
     ## Now we look for the boundary of the unseen area, to find points to use for the force field
     boundary_centers,boundary = find_boundary(squares)
-
-
     pos_main_drone = traj_pos[time_step]
 
     if repeaters:
+        for r in range(len(repeaters)):
+            if r == 0:
+                line=geometry.LineString([pos_main_drone,repeaters[r].position])
+            else:
+                line=geometry.LineString([repeaters[r].position,repeaters[r-1].position])
+            for obstacle in boundary:
+                if line.intersects(obstacle['square']):
+                    print("Lost LOS")
+                    exit(1)
         # if we have repeaters we move them
         if norm(repeaters[-1].position-ground_station)>=desired_range*2:
             #if the last added repeater is going out of rage from the ground station we add a new one
