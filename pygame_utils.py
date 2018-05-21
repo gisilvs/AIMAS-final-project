@@ -57,6 +57,7 @@ class Plotter():
         """
 
         self.screen.fill(white)
+        pg_gs=self.to_pygame(ground_station)
 
         ###UNCOMMENT TO PLOT THE TRAJECTORY OF THE MAIN DRONE
         #for i in range(1,len(traj_pos)):

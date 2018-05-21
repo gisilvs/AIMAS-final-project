@@ -77,13 +77,14 @@
   ],
   "ground_station": [0,0],
   "sensor_range":15,
-  "desired_range":10,
+  "desired_range":12,
+  "inner_range":9,
   "vehicle_L": 2,
-  "vehicle_a_max": 3,
+  "vehicle_a_max": 5,
   "vehicle_dt": 0.1,
   "vehicle_omega_max": 1.3,
   "vehicle_phi_max": 0.6,
   "vehicle_t": 0,
-  "vehicle_v_max": 2.1,
+  "vehicle_v_max": 3,
   "scanning_range": 10
 }
