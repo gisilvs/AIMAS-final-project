@@ -263,7 +263,7 @@ plotter = pygame_utils.Plotter() # contains the various plotting functions
 
 """Import configurations from json file"""
 data = json.load(open('P25_X.json'))
-traj = json.load(open('P25_26_traj.json'))
+traj = json.load(open('data.json'))
 
 #mine polygon
 bounding_polygon = data["bounding_polygon"]
@@ -281,10 +281,9 @@ v_max = data["vehicle_v_max"]
 
 #trajectory for main drone
 traj_t = traj["t"]
-traj_theta = traj["theta"]
 traj_x = traj["x"]
 traj_y = traj["y"]
-traj_pos = np.array(list(zip(traj_x,traj_y))) * 1.4
+traj_pos = np.array(list(zip(traj_x,traj_y))) #* 1.4
 traj_pos -= traj_pos[0]+np.array((-1,-1))
 
 #obstacles
