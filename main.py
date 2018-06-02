@@ -335,13 +335,19 @@ while not done:
     if repeaters:
         for r in range(len(repeaters)):
             if r == 0:
+                if norm(pos_main_drone-repeaters[r].position)>2*sensor_range:
+                    print("Lost LOS")
+                    time.sleep(20)
                 line=geometry.LineString([pos_main_drone,repeaters[r].position])
             else:
+                if norm(repeaters[r].position-repeaters[r-1].position)>2*sensor_range:
+                    print("Lost LOS")
+                    time.sleep(20)
                 line=geometry.LineString([repeaters[r].position,repeaters[r-1].position])
             for obstacle in boundary:
                 if line.intersects(obstacle['square']):
                     print("Lost LOS")
-                    exit(1)
+                    time.sleep(20)
         # if we have repeaters we move them
         if norm(repeaters[-1].position-ground_station) >= 2*desired_range:
             #if the last added repeater is going out of rage from the ground station we add a new one

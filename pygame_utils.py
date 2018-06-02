@@ -10,7 +10,7 @@ black=(0,0,0)
 red=(255,0,0)
 green=(0,255,0)
 blue=(0,0,255)
-purple=(76,0,153)
+orange=(255, 102, 0)
 dark_green=(0,153,0)
 
 
@@ -73,8 +73,8 @@ class Plotter():
         #sensor range in red
         pg.draw.circle(self.screen, red, self.to_pygame(main_pos), sensor_range*pg_scale, 1)
 
-        #scanning range in purple
-        pg.draw.circle(self.screen,purple,self.to_pygame(main_pos),scanning_range*pg_scale,1)
+        #scanning range in orange
+        pg.draw.circle(self.screen,orange,self.to_pygame(main_pos),scanning_range*pg_scale,1)
 
         #plot ground station todo convert to ellipse
         pg.draw.circle(self.screen,dark_green,self.to_pygame(ground_station),5)
