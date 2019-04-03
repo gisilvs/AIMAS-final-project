@@ -8,15 +8,15 @@ G_s = 1 # repulsion from obstacles and unseen areas
 G_n = 0.5 # noise repulsion
 
 # LOS parameters
-wm = 4 # for distance to closest obstacle/unseen area
+wm = 1 # for distance to closest obstacle/unseen area
 wl = 1 # for maximise the allowed distance from the followed drone
-n_samples = 10 # number of points to evaluate. If bigger, better result but slower
+n_samples = 30 # number of points to evaluate. If bigger, better result but slower
 
 # plotting
 n_squares = 20 # n*n squares in the discretised space. If bigger, better simulation but slower
-plot_step = 1 # update plot after n steps (bigger to speed up).
+plot_step = 10 # update plot after n steps (bigger to speed up).
 
 dt = 0.1
 
-v_range = 2 # used to find the next position for a repeater.
+v_range = 5 # used to find the next position for a repeater.
 use_sqrt = True # use square root in the optimization function or not

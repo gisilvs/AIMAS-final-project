@@ -91,6 +91,8 @@ def set_bg(screen,main_pos, bounding_polygon):
 
 def main():
 
+    save_path = "data1.json"
+
     MOVE_LEFT=np.array([0, 1])
     MOVE_RIGHT = np.array([0,-1])
     MOVE_UP = np.array([-1,0])
@@ -129,7 +131,7 @@ def main():
                     direction = MOVE_DOWN
                 elif event.key == K_SPACE:
                     data = {'t': t, 'x': x, 'y': y}
-                    with open('data.json', 'w') as outfile:
+                    with open(save_path, 'w') as outfile:
                         json.dump(data, outfile, indent=2)
                     exit(1)
 
