@@ -18,5 +18,5 @@ plot_step = 10 # update plot after n steps (bigger to speed up).
 
 dt = 0.1
 
-v_range = 5 # used to find the next position for a repeater.
+v_range = 2 # used to find the next position for a repeater.
 use_sqrt = True # use square root in the optimization function or not

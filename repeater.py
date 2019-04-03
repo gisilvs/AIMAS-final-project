@@ -26,7 +26,6 @@ class Repeater():
         self.v_max=v_max
 
         #parameters for controller and force field
-        # todo: choose good parameters for the gains
         # Proportional and differential gains
         self.kp = conf.kp
         self.kd = conf.kd

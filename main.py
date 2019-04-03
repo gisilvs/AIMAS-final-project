@@ -160,10 +160,10 @@ def get_bounding_lines(bounding_polygon):
 def sample_feasible_point(target_pos, repeater_pos, desired_range, sensor_range, repeater_v_max, boundary_obstacles):
 
     """
-    this function first sample a bunch of pints from an area reacheble in few time steps, and among them picks the one that maximise
+    this function first sample a bunch of points from an area reachable in few time steps, and among them picks the one that maximise
     our objective function
     :param target_pos: position of the followed drone
-    :param repeater_pos: position of the repater computing its new position
+    :param repeater_pos: position of the repeater computing its new position
     :param desired_range: desired line of sight to keep, smaller than the maximum LOS as precaution
     :param sensor_range: maximum range of the sensor (to have LOS we have to stay inside 2*sensor_range)
     :param repeater_v_max: max_velocity of repeater
