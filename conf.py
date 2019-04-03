@@ -13,8 +13,8 @@ wl = 1 # for maximise the allowed distance from the followed drone
 n_samples = 30 # number of points to evaluate. If bigger, better result but slower
 
 # plotting
-n_squares = 20 # n*n squares in the discretised space. If bigger, better simulation but slower
-plot_step = 10 # update plot after n steps (bigger to speed up).
+n_squares = 40 # n*n squares in the discretised space. If bigger, better simulation but slower
+plot_step = 5 # update plot after n steps (bigger to speed up).
 
 dt = 0.1
 

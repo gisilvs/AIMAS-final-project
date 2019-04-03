@@ -72,7 +72,7 @@ def list_to_pygame(list_of_points):
         pg_list_of_points.append(to_pygame(point))
     return  pg_list_of_points
 
-def set_bg(screen,main_pos, bounding_polygon):
+def set_bg(screen,main_pos, bounding_polygon, obstacles):
 
     screen.fill(white)
 
@@ -83,6 +83,7 @@ def set_bg(screen,main_pos, bounding_polygon):
     #plot main drone and its sensors
     pg.draw.line(screen, red, to_pygame(main_pos + np.array([1, 1])), to_pygame(main_pos + np.array([-1, -1])), 4)
     pg.draw.line(screen, red, to_pygame(main_pos + np.array([-1, 1])),to_pygame(main_pos + np.array([1, -1])),4)
+    [pg.draw.polygon(screen, black, list_to_pygame(obstacle), 0) for obstacle in obstacles]
 
     #plot cave boundaries
     pg.draw.polygon(screen,black,list_to_pygame(bounding_polygon),1)
@@ -106,6 +107,13 @@ def main():
 
     data = json.load(open('P25_X.json'))
     bounding_polygon = data["bounding_polygon"]
+    # obstacles
+    obstacles = []
+    sh_obstacles = []
+    for d in data:
+        if "obstacle" in d:
+            obstacle = data[d]
+            obstacles.append(obstacle)
 
     time_step = 0
     start = False
@@ -153,7 +161,7 @@ def main():
         x.append(drone.pos[0])
         y.append(drone.pos[1])
         t.append(tstep)
-        set_bg(screen,drone.pos,bounding_polygon)
+        set_bg(screen,drone.pos,bounding_polygon, obstacles)
         pg.display.flip()
 
 
